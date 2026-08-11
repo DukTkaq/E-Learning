@@ -2,16 +2,31 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const sequelize = require('./config/database');
+const authRoutes = require('./routes/authRoutes');
+
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Định tuyến API
+app.use('/api/auth', authRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the E-Learning API!' });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+
+// Test kết nối DB và chạy server
+sequelize.authenticate()
+  .then(() => {
+    console.log('✅ Kết nối Database Supabase thành công!');
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on port ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('❌ Lỗi kết nối Database:', err);
+  });
