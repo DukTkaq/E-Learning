@@ -116,7 +116,18 @@ const login = async (req, res) => {
   }
 };
 
+const logout = async (req, res) => {
+  try {
+    // With JWT, logout is primarily handled client-side by deleting the token.
+    res.json({ message: 'Logout successful!' });
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
 module.exports = {
   register,
-  login
+  login,
+  logout
 };
