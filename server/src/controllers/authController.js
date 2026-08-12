@@ -63,6 +63,60 @@ const register = async (req, res) => {
   }
 };
 
+const jwt = require('jsonwebtoken');
+
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate inputs
+    if (!email || !email.trim()) return res.status(400).json({ message: 'Email cannot be empty!' });
+    if (!password) return res.status(400).json({ message: 'Password cannot be empty!' });
+
+    // Check email
+    const user = await User.findOne({ 
+        where: { email: email.trim().toLowerCase() },
+        include: [{ model: Role }] 
+    });
+    
+    if (!user) {
+      return res.status(400).json({ message: 'Email does not exist!' });
+    }
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Incorrect password!' });
+    }
+
+    // Create JWT token
+    const token = jwt.sign(
+      { 
+          id: user.id, 
+          email: user.email, 
+          role: user.Role ? user.Role.role_name : null 
+      },
+      process.env.JWT_SECRET || 'SWP391_SECRET_KEY_MOCK', // Should be in .env
+      { expiresIn: '1d' } // Token lives for 1 day
+    );
+
+    res.json({
+      message: 'Login successful!',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.Role ? user.Role.role_name : null
+      }
+    });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
 module.exports = {
-  register
+  register,
+  login
 };
