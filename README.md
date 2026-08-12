@@ -23,6 +23,19 @@ Dự án được chia làm 2 thư mục ngang hàng (Monorepo):
 
 ---
 
+## Cấu hình Database (Bắt buộc cho thành viên mới)
+
+Để Backend có thể chạy được, bạn cần phải có file biến môi trường để kết nối với cơ sở dữ liệu **Supabase (PostgreSQL)**.
+
+1. Vào thư mục `server/`.
+2. Tạo một file mới tên là `.env`.
+3. Copy toàn bộ nội dung từ file `server/.env.example` dán vào file `.env` vừa tạo.
+4. **Liên hệ Team Leader** để lấy mật khẩu Database thực tế điền vào biến `DATABASE_URL` trong file `.env`.
+
+*(Lưu ý: File `.env` chứa thông tin nhạy cảm nên đã được đưa vào `.gitignore`, tuyệt đối không cố gắng push file này lên Github).*
+
+---
+
 ## Hướng dẫn chạy dự án chi tiết (Localhost)
 
 Dự án này sử dụng mô hình Client-Server, nên bạn **bắt buộc phải mở HAI tab terminal riêng biệt** chạy song song cùng lúc để hệ thống hoạt động.
