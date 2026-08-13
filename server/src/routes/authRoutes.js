@@ -17,4 +17,7 @@ router.post('/logout', authController.logout);
 // Update Profile API
 router.put('/profile', verifyToken, upload.single('avatar'), authController.updateProfile);
 
+// Change Password API
+router.put('/change-password', verifyToken, authController.changePassword);
+
 module.exports = router;
