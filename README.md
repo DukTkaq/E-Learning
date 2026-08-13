@@ -63,6 +63,23 @@ Hãy ấn giữ nút `Ctrl` (hoặc `Cmd` trên Mac) và **click chuột thẳng
 
 ---
 
+## Tài khoản Test (Mockup Accounts)
+Để thuận tiện cho việc kiểm thử các Use Case, hệ thống đã chuẩn bị sẵn 3 tài khoản đại diện cho 3 vai trò (Roles) khác nhau. Bạn có thể sử dụng các tài khoản này để đăng nhập ngay khi khởi động dự án:
+
+1. **Admin (Quản trị viên)**
+   - Email: `admin@gmail.com`
+   - Password: `123456`
+2. **Teacher (Giáo viên)**
+   - Email: `teacher@gmail.com`
+   - Password: `123456`
+3. **Student (Học viên)**
+   - Email: `student@gmail.com`
+   - Password: `123456`
+
+*(Lưu ý: Mật khẩu trên thực tế đã được mã hóa bằng Bcrypt trong cơ sở dữ liệu).*
+
+---
+
 ## Quy tắc Code nhóm (Team Convention)
 1. Mỗi người code một tính năng thì tạo branch mới: `git checkout -b feature/ten-tinh-nang`
 2. Sau khi code xong phải tạo Pull Request (PR) để review, không tự ý merge thẳng vào branch `master`.
