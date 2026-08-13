@@ -20,4 +20,10 @@ router.put('/profile', verifyToken, upload.single('avatar'), authController.upda
 // Change Password API
 router.put('/change-password', verifyToken, authController.changePassword);
 
+// Forgot Password API
+router.post('/forgot-password', authController.forgotPassword);
+
+// Reset Password API
+router.post('/reset-password', authController.resetPassword);
+
 module.exports = router;

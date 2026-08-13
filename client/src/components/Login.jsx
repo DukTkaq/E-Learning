@@ -108,9 +108,16 @@ export default function Login() {
                 : 'border-gray-200 focus:border-primary focus:ring-primary/10'
             }`}
           />
-          {errorField === 'password' && (
-            <p className="mt-1 text-sm text-error font-medium">Please enter a valid password.</p>
-          )}
+          <div className="flex justify-between items-center mt-2">
+            {errorField === 'password' ? (
+              <p className="text-sm text-error font-medium">Please enter a valid password.</p>
+            ) : (
+              <div></div>
+            )}
+            <Link to="/forgot-password" className="text-sm text-primary hover:text-primary-hover hover:underline transition-colors font-medium">
+              Forgot Password?
+            </Link>
+          </div>
         </div>
         
         <button 

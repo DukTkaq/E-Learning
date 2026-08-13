@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const Role = require('../models/Role');
+const nodemailer = require('nodemailer');
 
 const register = async (req, res) => {
   try {
@@ -211,10 +212,92 @@ const changePassword = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: 'Email cannot be empty!' });
+    }
+
+    const user = await User.findOne({ where: { email: email.trim().toLowerCase() } });
+    if (!user) {
+      return res.status(404).json({ message: 'Email does not exist!' });
+    }
+
+    // Create JWT token for password reset
+    const resetToken = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET || 'SWP391_SECRET_KEY_MOCK',
+      { expiresIn: '15m' }
+    );
+
+    const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
+
+    // Normally you would send this via nodemailer:
+    // const transporter = nodemailer.createTransport({ ... });
+    // await transporter.sendMail({ to: user.email, subject: 'Password Reset', text: resetLink });
+    
+    // For now, print to console so the user can test without real SMTP
+    console.log(`\n==========================================`);
+    console.log(`PASSWORD RESET LINK FOR ${user.email}:`);
+    console.log(resetLink);
+    console.log(`==========================================\n`);
+
+    res.json({ message: 'Password reset link sent to your email (check server console)' });
+  } catch (error) {
+    console.error('Error during forgot password:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'Token and new password are required!' });
+    }
+
+    // Validate New Password
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters long and contain letters and numbers!' });
+    }
+
+    // Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'SWP391_SECRET_KEY_MOCK');
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid or expired reset token!' });
+    }
+
+    const user = await User.findByPk(decoded.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found!' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ message: 'Password has been reset successfully! You can now log in.' });
+  } catch (error) {
+    console.error('Error during reset password:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
   logout,
   updateProfile,
-  changePassword
+  changePassword,
+  forgotPassword,
+  resetPassword
 };
