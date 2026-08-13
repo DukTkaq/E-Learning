@@ -234,17 +234,44 @@ const forgotPassword = async (req, res) => {
 
     const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
 
-    // Normally you would send this via nodemailer:
-    // const transporter = nodemailer.createTransport({ ... });
-    // await transporter.sendMail({ to: user.email, subject: 'Password Reset', text: resetLink });
-    
-    // For now, print to console so the user can test without real SMTP
-    console.log(`\n==========================================`);
-    console.log(`PASSWORD RESET LINK FOR ${user.email}:`);
-    console.log(resetLink);
-    console.log(`==========================================\n`);
+    // Send email using nodemailer if configured
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      });
 
-    res.json({ message: 'Password reset link sent to your email (check server console)' });
+      const mailOptions = {
+        from: `"E-Learning Platform" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: 'Password Reset Request',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #3b82f6;">Password Reset</h2>
+            <p>You recently requested to reset your password for your E-Learning account.</p>
+            <p>Click the button below to reset it. This link is valid for 15 minutes.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset Password</a>
+            </div>
+            <p>If you did not request a password reset, please ignore this email.</p>
+          </div>
+        `
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`Email sent successfully to ${user.email}`);
+    } else {
+      // Fallback: print to console if no SMTP configured
+      console.log(`\n==========================================`);
+      console.log(`[NO SMTP CONFIGURED] PASSWORD RESET LINK FOR ${user.email}:`);
+      console.log(resetLink);
+      console.log(`==========================================\n`);
+    }
+
+    res.json({ message: 'Password reset link sent to your email' });
   } catch (error) {
     console.error('Error during forgot password:', error);
     res.status(500).json({ message: 'Internal server error', error: error.message });
