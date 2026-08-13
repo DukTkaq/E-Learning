@@ -4,6 +4,7 @@ import Register from './components/Register'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import Layout from './components/Layout'
+import Profile from './components/Profile'
 
 function App() {
   return (
@@ -49,6 +50,11 @@ function App() {
         <Route path="/dashboard" element={
           <Layout>
             <Dashboard />
+          </Layout>
+        } />
+        <Route path="/profile" element={
+          <Layout>
+            <Profile />
           </Layout>
         } />
       </Routes>

@@ -49,32 +49,26 @@ export default function Dashboard() {
   if (!user) return null
 
   return (
-    <div className="w-full max-w-4xl bg-card-bg backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-gray-200 transition-all">
-      <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
-        <h2 className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
-          Dashboard
-        </h2>
-        <button 
-          onClick={handleLogout}
-          className="px-6 py-2 bg-error/10 text-error hover:bg-error hover:text-white font-semibold rounded-xl transition-all duration-300"
-        >
-          Logout
-        </button>
+    <div className="w-full space-y-6">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">
+            Welcome back, <span className="text-primary">{user.name}</span>!
+          </h2>
+          <p className="text-gray-500 mt-1">What do you want to learn today?</p>
+        </div>
       </div>
 
-      <div className="bg-white/80 p-6 rounded-2xl border border-gray-100 shadow-sm">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Welcome back, {user.name}!</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-            <p className="text-sm text-gray-500 mb-1">Email Address</p>
-            <p className="font-medium text-gray-800">{user.email}</p>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-            <p className="text-sm text-gray-500 mb-1">Account Role</p>
-            <p className="font-medium text-primary">
-              {user.role || 'Student'}
-            </p>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Placeholder cards for future features */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-40 flex flex-col justify-center items-center text-gray-400 border-dashed border-2">
+          Featured Courses Area
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-40 flex flex-col justify-center items-center text-gray-400 border-dashed border-2">
+          My Progress Area
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-40 flex flex-col justify-center items-center text-gray-400 border-dashed border-2">
+          Recommendations
         </div>
       </div>
     </div>
