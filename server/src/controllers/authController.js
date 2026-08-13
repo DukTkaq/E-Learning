@@ -107,7 +107,8 @@ const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.Role ? user.Role.role_name : null
+        role: user.Role ? user.Role.role_name : null,
+        avatar_url: user.avatar_url
       }
     });
   } catch (error) {
@@ -144,6 +145,14 @@ const updateProfile = async (req, res) => {
     }
 
     user.name = name.trim();
+    
+    // Check if an avatar was uploaded
+    if (req.file) {
+      // The file is saved in public/uploads/avatars/filename
+      // We store the relative URL in the DB: /uploads/avatars/filename
+      user.avatar_url = `/uploads/avatars/${req.file.filename}`;
+    }
+
     await user.save();
 
     res.json({
@@ -152,7 +161,8 @@ const updateProfile = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.Role ? user.Role.role_name : null
+        role: user.Role ? user.Role.role_name : null,
+        avatar_url: user.avatar_url
       }
     });
   } catch (error) {

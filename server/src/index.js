@@ -7,8 +7,13 @@ const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
+const path = require('path');
+
 app.use(cors());
 app.use(express.json());
+
+// Serve static files (like uploaded avatars)
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Định tuyến API
 app.use('/api/auth', authRoutes);

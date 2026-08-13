@@ -28,6 +28,10 @@ const User = sequelize.define('User', {
       model: Role,
       key: 'id'
     }
+  },
+  avatar_url: {
+    type: DataTypes.STRING,
+    allowNull: true
   }
 }, {
   tableName: 'users',

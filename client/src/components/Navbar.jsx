@@ -33,14 +33,14 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           
           {/* Logo */}
-          <div className="flex-shrink-0 flex items-center gap-2 cursor-pointer">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+          <Link to="/dashboard" className="flex-shrink-0 flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center shadow-sm">
               <BookOpen className="text-white w-5 h-5" />
             </div>
             <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               E-Learning
             </span>
-          </div>
+          </Link>
 
           {/* Search Bar (Desktop) */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">
@@ -73,9 +73,13 @@ export default function Navbar() {
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center gap-2 p-1 pl-3 pr-1 rounded-full border border-gray-200 hover:border-primary/30 hover:bg-gray-50 transition-all focus:outline-none"
                 >
-                  <span className="text-sm font-medium text-gray-700 hidden sm:block">{user.name}</span>
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-secondary to-primary flex items-center justify-center text-white font-bold">
-                    {user.name.charAt(0)}
+                  <span className="text-sm font-medium text-gray-700 hidden sm:block">{user?.name || 'Unknown User'}</span>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-secondary to-primary flex items-center justify-center text-white font-bold overflow-hidden">
+                    {user?.avatar_url ? (
+                      <img src={`http://localhost:3000${user.avatar_url}`} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      (user?.name || 'U').charAt(0).toUpperCase()
+                    )}
                   </div>
                 </button>
 

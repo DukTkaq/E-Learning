@@ -3,6 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 
 const { verifyToken } = require('../middlewares/authMiddleware');
+const upload = require('../middlewares/uploadMiddleware');
 
 // Register API
 router.post('/register', authController.register);
@@ -14,6 +15,6 @@ router.post('/login', authController.login);
 router.post('/logout', authController.logout);
 
 // Update Profile API
-router.put('/profile', verifyToken, authController.updateProfile);
+router.put('/profile', verifyToken, upload.single('avatar'), authController.updateProfile);
 
 module.exports = router;
