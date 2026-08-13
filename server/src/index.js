@@ -24,7 +24,8 @@ sequelize.authenticate()
   .then(() => {
     console.log('✅ Kết nối Database Supabase thành công!');
     app.listen(PORT, () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
+      console.log(`🚀 Backend API Server is running on port ${PORT}`);
+      console.log(`🔗 Local Link: http://localhost:${PORT}`);
     });
   })
   .catch(err => {
