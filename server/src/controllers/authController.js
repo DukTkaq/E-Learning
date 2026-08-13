@@ -126,8 +126,44 @@ const logout = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const { name } = req.body;
+    const userId = req.user.id; // From verifyToken middleware
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: 'Name cannot be empty!' });
+    }
+
+    const user = await User.findByPk(userId, {
+      include: [{ model: Role }]
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found!' });
+    }
+
+    user.name = name.trim();
+    await user.save();
+
+    res.json({
+      message: 'Profile updated successfully!',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.Role ? user.Role.role_name : null
+      }
+    });
+  } catch (error) {
+    console.error('Error during profile update:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
-  logout
+  logout,
+  updateProfile
 };
