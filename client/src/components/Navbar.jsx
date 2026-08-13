@@ -51,7 +51,7 @@ export default function Navbar() {
               <input
                 type="text"
                 className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
-                placeholder="Tìm kiếm khóa học..."
+                placeholder="Search courses..."
               />
             </div>
           </div>
@@ -84,11 +84,11 @@ export default function Navbar() {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden origin-top-right transform transition-all">
                     <Link to="/profile" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
                       <Settings className="w-4 h-4" />
-                      Hồ sơ của tôi
+                      My Profile
                     </Link>
                     <Link to="/my-courses" className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
                       <BookOpen className="w-4 h-4" />
-                      Khóa học của tôi
+                      My Courses
                     </Link>
                     <div className="h-px bg-gray-100 my-1"></div>
                     <button 
@@ -96,7 +96,7 @@ export default function Navbar() {
                       className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-error hover:bg-error/5 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
-                      Đăng xuất
+                      Logout
                     </button>
                   </div>
                 )}
@@ -104,10 +104,10 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center gap-3">
                 <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-primary transition-colors">
-                  Đăng nhập
+                  Login
                 </Link>
                 <Link to="/register" className="text-sm font-medium text-white bg-primary hover:bg-primary-hover px-4 py-2 rounded-lg shadow-sm shadow-primary/30 transition-all hover:-translate-y-0.5">
-                  Đăng ký
+                  Sign Up
                 </Link>
               </div>
             )}
