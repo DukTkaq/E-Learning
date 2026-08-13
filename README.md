@@ -67,14 +67,14 @@ Hãy ấn giữ nút `Ctrl` (hoặc `Cmd` trên Mac) và **click chuột thẳng
 Để thuận tiện cho việc kiểm thử các Use Case, hệ thống đã chuẩn bị sẵn 3 tài khoản đại diện cho 3 vai trò (Roles) khác nhau. Bạn có thể sử dụng các tài khoản này để đăng nhập ngay khi khởi động dự án:
 
 1. **Admin (Quản trị viên)**
-   - Email: `admin@gmail.com`
-   - Password: `123456`
+   - Email: `admin@fpt.edu.vn`
+   - Password: `Password123`
 2. **Teacher (Giáo viên)**
-   - Email: `teacher@gmail.com`
-   - Password: `123456`
+   - Email: `teacher@fpt.edu.vn`
+   - Password: `Password123`
 3. **Student (Học viên)**
-   - Email: `student@gmail.com`
-   - Password: `123456`
+   - Email: `student@fpt.edu.vn`
+   - Password: `Password123`
 
 *(Lưu ý: Mật khẩu trên thực tế đã được mã hóa bằng Bcrypt trong cơ sở dữ liệu).*
 
