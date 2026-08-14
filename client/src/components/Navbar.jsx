@@ -86,6 +86,12 @@ export default function Navbar() {
                 {/* Dropdown */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 overflow-hidden origin-top-right transform transition-all">
+                    {user?.role_id === 1 && (
+                      <Link to="/admin/users" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors font-medium border-b border-gray-100">
+                        <User className="w-4 h-4 text-primary" />
+                        Quản lý Users
+                      </Link>
+                    )}
                     <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
                       <Settings className="w-4 h-4" />
                       My Profile

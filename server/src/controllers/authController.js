@@ -84,6 +84,11 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'Email does not exist!' });
     }
 
+    // Check if user is banned
+    if (user.status === 'Banned') {
+      return res.status(403).json({ message: 'Your account has been banned. Please contact the Administrator!' });
+    }
+
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -95,6 +100,7 @@ const login = async (req, res) => {
       { 
           id: user.id, 
           email: user.email, 
+          role_id: user.role_id,
           role: user.Role ? user.Role.role_name : null 
       },
       process.env.JWT_SECRET || 'SWP391_SECRET_KEY_MOCK', // Should be in .env
@@ -108,6 +114,7 @@ const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        role_id: user.role_id,
         role: user.Role ? user.Role.role_name : null,
         avatar_url: user.avatar_url
       }

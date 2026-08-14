@@ -5,6 +5,7 @@ require('dotenv').config();
 const sequelize = require('./config/database');
 require('./models'); // Load all models and associations
 const authRoutes = require('./routes/authRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Định tuyến API
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the E-Learning API!' });

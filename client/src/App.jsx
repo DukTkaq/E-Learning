@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Register from './components/Register'
 import Login from './components/Login'
@@ -7,11 +7,12 @@ import Layout from './components/Layout'
 import Profile from './components/Profile'
 import ForgotPassword from './components/ForgotPassword'
 import ResetPassword from './components/ResetPassword'
+import UserManagement from './components/UserManagement'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   return (
     <Router>
-      {/* Toast Notifications positioned at top-right exactly as requested */}
       <Toaster 
         position="top-right" 
         toastOptions={{
@@ -29,7 +30,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         
-        {/* Auth Routes (No Navbar) */}
+        {/* Auth Routes */}
         <Route path="/register" element={
           <div className="min-h-screen font-inter bg-slate-50 relative flex items-center justify-center p-4 overflow-hidden">
             <div className="absolute top-0 -left-4 w-72 h-72 bg-primary rounded-full mix-blend-multiply filter blur-2xl opacity-20 animate-blob"></div>
@@ -77,6 +78,15 @@ function App() {
             <Profile />
           </Layout>
         } />
+
+        {/* Admin Routes */}
+        <Route element={<ProtectedRoute allowedRoles={[1]} />}>
+          <Route path="/admin/users" element={
+            <Layout>
+              <UserManagement />
+            </Layout>
+          } />
+        </Route>
       </Routes>
     </Router>
   )
