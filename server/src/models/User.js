@@ -51,8 +51,4 @@ const User = sequelize.define('User', {
   timestamps: false // Dùng timestamps custom
 });
 
-// Thiết lập quan hệ
-User.belongsTo(Role, { foreignKey: 'role_id' });
-Role.hasMany(User, { foreignKey: 'role_id' });
-
 module.exports = User;

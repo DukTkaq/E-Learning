@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const sequelize = require('./config/database');
+require('./models'); // Load all models and associations
 const authRoutes = require('./routes/authRoutes');
 
 const app = express();
