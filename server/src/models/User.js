@@ -4,9 +4,9 @@ const Role = require('./Role');
 
 const User = sequelize.define('User', {
   id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true
   },
   name: {
     type: DataTypes.STRING,
@@ -32,10 +32,23 @@ const User = sequelize.define('User', {
   avatar_url: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  status: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: 'Active'
+  },
+  reset_token: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  created_at: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'users',
-  timestamps: false // Dựa vào ảnh chụp, bảng không có cột created_at, updated_at
+  timestamps: false // Dùng timestamps custom
 });
 
 // Thiết lập quan hệ
