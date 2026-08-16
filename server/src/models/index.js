@@ -8,6 +8,7 @@ const Lesson = require('./Lesson');
 const Quiz = require('./Quiz');
 const Question = require('./Question');
 const Cart = require('./Cart');
+const CartItem = require('./CartItem');
 const Coupon = require('./Coupon');
 const Payment = require('./Payment');
 const Enrollment = require('./Enrollment');
@@ -44,9 +45,13 @@ Question.belongsTo(Quiz, { foreignKey: 'quiz_id' });
 User.hasMany(Cart, { foreignKey: 'user_id' });
 Cart.belongsTo(User, { foreignKey: 'user_id' });
 
-// Course & Cart
-Course.hasMany(Cart, { foreignKey: 'course_id' });
-Cart.belongsTo(Course, { foreignKey: 'course_id' });
+// Cart & CartItem
+Cart.hasMany(CartItem, { foreignKey: 'cart_id', onDelete: 'CASCADE' });
+CartItem.belongsTo(Cart, { foreignKey: 'cart_id' });
+
+// Course & CartItem
+Course.hasMany(CartItem, { foreignKey: 'course_id', onDelete: 'CASCADE' });
+CartItem.belongsTo(Course, { foreignKey: 'course_id' });
 
 // User (Instructor) & Coupon
 User.hasMany(Coupon, { foreignKey: 'instructor_id', as: 'InstructorCoupons' });
@@ -102,6 +107,7 @@ module.exports = {
   Quiz,
   Question,
   Cart,
+  CartItem,
   Coupon,
   Payment,
   Enrollment,
