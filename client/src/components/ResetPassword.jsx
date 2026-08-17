@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Lock, Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react';
+import api from '../utils/api';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -41,27 +42,17 @@ export default function ResetPassword() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, newPassword: formData.newPassword })
+      const response = await api.post('/auth/reset-password', { 
+        token, 
+        newPassword: formData.newPassword 
       });
 
-      let data = {};
-      try {
-        data = await response.json();
-      } catch (err) {
-        throw new Error('Server returned invalid data');
-      }
-
-      if (response.ok) {
-        toast.success(data.message);
-        setIsSuccess(true);
-      } else {
-        toast.error(data.message || 'Failed to reset password');
-      }
+      toast.success(response.data.message);
+      setIsSuccess(true);
     } catch (error) {
-      toast.error(error.message || 'Could not connect to the server');
+      if (error.response?.status !== 403) {
+        toast.error(error.response?.data?.message || 'Failed to reset password');
+      }
     } finally {
       setLoading(false);
     }
