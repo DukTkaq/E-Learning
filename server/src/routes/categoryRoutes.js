@@ -7,5 +7,6 @@ const { authorizeRoles } = require('../middlewares/roleMiddleware');
 router.post('/', verifyToken, authorizeRoles('admin'), categoryController.createCategory);
 router.get('/', verifyToken, authorizeRoles('admin'), categoryController.getAllCategories);
 router.put('/:id', verifyToken, authorizeRoles('admin'), categoryController.updateCategory);
+router.delete('/:id', verifyToken, authorizeRoles('admin'), categoryController.deleteCategory);
 
 module.exports = router;
