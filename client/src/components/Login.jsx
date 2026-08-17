@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import api from '../utils/api'
+
 
 export default function Login() {
   const [formData, setFormData] = useState({
@@ -48,27 +50,24 @@ export default function Login() {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-      const data = await response.json()
+      const response = await api.post('/auth/login', formData)
+      const data = response.data
 
-      if (response.ok) {
-        toast.success(data.message)
-        localStorage.setItem('token', data.token)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        // Redirect to dashboard
-        navigate('/dashboard')
-      } else {
-        toast.error(data.message || 'Login failed!')
-        // Highlight specific fields based on generic backend errors if possible
-        if (data.message.toLowerCase().includes('email')) setErrorField('email')
-        if (data.message.toLowerCase().includes('password')) setErrorField('password')
-      }
+      toast.success(data.message)
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      // Redirect to dashboard
+      navigate('/dashboard')
     } catch (err) {
-      toast.error('Could not connect to the server!')
+      const data = err.response?.data || {}
+      // Skip toast if it's a ban error because the global interceptor already shows a SweetAlert popup
+      if (err.response?.status !== 403) {
+        toast.error(data.message || 'Login failed!')
+      }
+      
+      // Highlight specific fields based on generic backend errors if possible
+      if (data.message?.toLowerCase().includes('email')) setErrorField('email')
+      if (data.message?.toLowerCase().includes('password')) setErrorField('password')
     } finally {
       setLoading(false)
     }

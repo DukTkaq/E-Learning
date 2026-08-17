@@ -1,24 +1,35 @@
 const jwt = require('jsonwebtoken');
+const { User } = require('../models');
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   const authHeader = req.header('Authorization');
   
   if (!authHeader) {
-    return res.status(401).json({ message: 'Không tìm thấy token, từ chối truy cập!' });
+    return res.status(401).json({ message: 'Access denied. No token provided!' });
   }
 
-  // Token thường có dạng "Bearer <token_chuỗi_hash>"
+  // Token format: "Bearer <token>"
   const token = authHeader.split(' ')[1] || authHeader;
 
   try {
     const secret = process.env.JWT_SECRET || 'SWP391_SECRET_KEY_MOCK';
     const decoded = jwt.verify(token, secret);
     
-    // Lưu thông tin user vào request để các hàm sau (controllers) có thể dùng
+    // Check if user exists and is not banned
+    const user = await User.findByPk(decoded.id);
+    if (!user) {
+      return res.status(401).json({ message: 'User not found!' });
+    }
+
+    if (user.status === 'Banned') {
+      return res.status(403).json({ message: 'Your account has been banned or suspended. Please contact the Administrator via email admin@fpt.edu.vn for more details and support.' });
+    }
+
+    // Save user info into request
     req.user = decoded; 
-    next(); // Cho phép đi tiếp vào route
+    next(); 
   } catch (error) {
-    return res.status(400).json({ message: 'Token không hợp lệ hoặc đã hết hạn!' });
+    return res.status(401).json({ message: 'Invalid or expired token!' });
   }
 };
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Mail, Shield, Camera, Edit2, Save, X, Lock, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
+import api from '../utils/api'
 
 export default function Profile() {
   const [user, setUser] = useState(null)
@@ -70,33 +71,21 @@ export default function Profile() {
         formData.append('avatar', selectedFile)
       }
 
-      const response = await fetch('http://localhost:3000/api/auth/profile', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
+      const response = await api.put('/auth/profile', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       })
 
-      let data = {}
-      try {
-        data = await response.json()
-      } catch (e) {
-        throw new Error('Server returned invalid data (possibly 404/500 HTML)')
-      }
-
-      if (response.ok) {
-        toast.success(data.message)
-        setUser(data.user)
-        localStorage.setItem('user', JSON.stringify(data.user))
-        setIsEditing(false)
-        setSelectedFile(null)
-        setPreviewUrl(null)
-      } else {
-        toast.error(data.message || 'Failed to update profile')
-      }
+      const data = response.data
+      toast.success(data.message)
+      setUser(data.user)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      setIsEditing(false)
+      setSelectedFile(null)
+      setPreviewUrl(null)
     } catch (error) {
-      toast.error(error.message || 'Could not connect to the server')
+      if (error.response?.status !== 403) {
+        toast.error(error.response?.data?.message || 'Failed to update profile')
+      }
     } finally {
       setLoading(false)
     }
@@ -115,34 +104,19 @@ export default function Profile() {
 
     setPasswordLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/auth/change-password', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          oldPassword: passwordForm.oldPassword,
-          newPassword: passwordForm.newPassword
-        })
+      const response = await api.put('/auth/change-password', {
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword
       });
 
-      let data = {};
-      try {
-        data = await response.json();
-      } catch (e) {
-        throw new Error('Server returned invalid data (possibly 404/500 HTML)');
-      }
-
-      if (response.ok) {
-        toast.success(data.message);
-        setIsChangingPassword(false);
-        setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
-      } else {
-        toast.error(data.message || 'Failed to change password');
-      }
+      const data = response.data;
+      toast.success(data.message);
+      setIsChangingPassword(false);
+      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
-      toast.error(error.message || 'Could not connect to the server');
+      if (error.response?.status !== 403) {
+        toast.error(error.response?.data?.message || 'Failed to change password');
+      }
     } finally {
       setPasswordLoading(false);
     }
