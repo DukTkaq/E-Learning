@@ -4,21 +4,21 @@ const verifyToken = (req, res, next) => {
   const authHeader = req.header('Authorization');
   
   if (!authHeader) {
-    return res.status(401).json({ message: 'Không tìm thấy token, từ chối truy cập!' });
+    return res.status(401).json({ message: 'Token not found, access denied!' });
   }
 
-  // Token thường có dạng "Bearer <token_chuỗi_hash>"
+  // Token often looks like "Bearer <hash_string>"
   const token = authHeader.split(' ')[1] || authHeader;
 
   try {
     const secret = process.env.JWT_SECRET || 'SWP391_SECRET_KEY_MOCK';
     const decoded = jwt.verify(token, secret);
     
-    // Lưu thông tin user vào request để các hàm sau (controllers) có thể dùng
+    // Save user info into request for controllers to use
     req.user = decoded; 
-    next(); // Cho phép đi tiếp vào route
+    next(); // Allow proceeding to route
   } catch (error) {
-    return res.status(400).json({ message: 'Token không hợp lệ hoặc đã hết hạn!' });
+    return res.status(400).json({ message: 'Invalid or expired token!' });
   }
 };
 

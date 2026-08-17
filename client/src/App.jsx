@@ -8,6 +8,7 @@ import Profile from './components/Profile'
 import ForgotPassword from './components/ForgotPassword'
 import ResetPassword from './components/ResetPassword'
 import UserManagement from './components/UserManagement'
+import CategoryManagement from './components/CategoryManagement'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -84,6 +85,11 @@ function App() {
           <Route path="/admin/users" element={
             <Layout>
               <UserManagement />
+            </Layout>
+          } />
+          <Route path="/admin/categories" element={
+            <Layout>
+              <CategoryManagement />
             </Layout>
           } />
         </Route>
