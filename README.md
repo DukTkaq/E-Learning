@@ -69,8 +69,8 @@ Hãy ấn giữ nút `Ctrl` (hoặc `Cmd` trên Mac) và **click chuột thẳng
 1. **Admin (Quản trị viên)**
    - Email: `admin@fpt.edu.vn`
    - Password: `Password123`
-2. **Teacher (Giáo viên)**
-   - Email: `teacher@fpt.edu.vn`
+2. **Instructor (Giảng viên)**
+   - Email: `instructor@fpt.edu.vn`
    - Password: `Password123`
 3. **Student (Học viên)**
    - Email: `student@fpt.edu.vn`
