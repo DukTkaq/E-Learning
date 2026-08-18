@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { AlertTriangle, X } from 'lucide-react';
 
 const UserManagement = () => {
@@ -14,10 +14,7 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/admin/users', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/admin/users');
       setUsers(response.data);
       setLoading(false);
     } catch (err) {
@@ -44,11 +41,7 @@ const UserManagement = () => {
     const endpoint = isBanning ? `/ban` : `/unban`;
 
     try {
-      const token = localStorage.getItem('token');
-      
-      await axios.put(`http://localhost:3000/api/admin/users/${user.id}${endpoint}`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/admin/users/${user.id}${endpoint}`, {});
 
       // Update UI
       setUsers(users.map(u => 

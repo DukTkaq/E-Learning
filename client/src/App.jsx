@@ -10,6 +10,8 @@ import ResetPassword from './components/ResetPassword'
 import UserManagement from './components/UserManagement'
 import CategoryManagement from './components/CategoryManagement'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminLayout from './components/layout/AdminLayout'
+import AdminDashboard from './components/AdminDashboard'
 
 function App() {
   return (
@@ -82,10 +84,15 @@ function App() {
 
         {/* Admin Routes */}
         <Route element={<ProtectedRoute allowedRoles={[1]} />}>
+          <Route path="/admin/dashboard" element={
+            <AdminLayout>
+              <AdminDashboard />
+            </AdminLayout>
+          } />
           <Route path="/admin/users" element={
-            <Layout>
+            <AdminLayout>
               <UserManagement />
-            </Layout>
+            </AdminLayout>
           } />
           <Route path="/admin/categories" element={
             <Layout>

@@ -64,3 +64,53 @@ exports.unbanUser = async (req, res) => {
     res.status(500).json({ message: 'Internal server error while unbanning user' });
   }
 };
+
+// [GET] /api/admin/dashboard
+exports.getDashboardMetrics = async (req, res) => {
+  try {
+    const { range } = req.query; // 'last_7_days', 'last_30_days', 'year_to_date'
+    const { Course } = require('../models');
+
+    // 1. Get role IDs
+    const studentRole = await Role.findOne({ where: { role_name: 'Student' } });
+    const instructorRole = await Role.findOne({ where: { role_name: 'Instructor' } });
+
+    // 2. Count metrics
+    const totalUsers = await User.count({ where: { role_id: studentRole?.role_id || 2 } });
+    const totalInstructors = await User.count({ where: { role_id: instructorRole?.role_id || 3 } });
+    const totalCourses = await Course.count();
+    
+    // Mock Revenue for now since we don't have a complex payment system populated yet
+    const totalRevenue = totalCourses * 150; 
+
+    // 3. Generate Chart Data based on range
+    const chartData = [];
+    let days = 7;
+    if (range === 'last_30_days') days = 30;
+    else if (range === 'year_to_date') days = new Date().getMonth() * 30 + new Date().getDate();
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      chartData.push({
+        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        revenue: Math.floor(Math.random() * 500) + 50, // Mock daily revenue
+        enrollments: Math.floor(Math.random() * 20) + 1, // Mock daily enrollments
+      });
+    }
+
+    res.json({
+      metrics: {
+        totalUsers,
+        totalInstructors,
+        totalCourses,
+        totalRevenue
+      },
+      chartData
+    });
+
+  } catch (error) {
+    console.error('Error fetching dashboard metrics:', error);
+    res.status(500).json({ message: 'Internal server error while fetching dashboard metrics' });
+  }
+};
