@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Mail, ArrowLeft } from 'lucide-react';
+import api from '../utils/api';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -18,27 +19,13 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      let data = {};
-      try {
-        data = await response.json();
-      } catch (err) {
-        throw new Error('Server returned invalid data');
-      }
-
-      if (response.ok) {
-        toast.success(data.message);
-        setIsSent(true);
-      } else {
-        toast.error(data.message || 'Failed to send reset link');
-      }
+      const response = await api.post('/auth/forgot-password', { email });
+      toast.success(response.data.message);
+      setIsSent(true);
     } catch (error) {
-      toast.error(error.message || 'Could not connect to the server');
+      if (error.response?.status !== 403) {
+        toast.error(error.response?.data?.message || 'Failed to send reset link');
+      }
     } finally {
       setLoading(false);
     }

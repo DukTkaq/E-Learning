@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import api from '../utils/api'
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -56,25 +57,20 @@ export default function Register() {
     }
 
     try {
-      const response = await fetch('http://localhost:3000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-      const data = await response.json()
+      const response = await api.post('/auth/register', formData)
+      const data = response.data
 
-      if (response.ok) {
-        toast.success(data.message)
-        setFormData({ name: '', email: '', password: '' })
-        setTimeout(() => navigate('/login'), 2000)
-      } else {
-        toast.error(data.message || 'An error occurred!')
-        if (data.message.toLowerCase().includes('email')) setErrorField('email')
-        if (data.message.toLowerCase().includes('password')) setErrorField('password')
-        if (data.message.toLowerCase().includes('name')) setErrorField('name')
-      }
+      toast.success(data.message)
+      setFormData({ name: '', email: '', password: '' })
+      setTimeout(() => navigate('/login'), 2000)
     } catch (err) {
-      toast.error('Could not connect to the server!')
+      const data = err.response?.data || {}
+      if (err.response?.status !== 403) {
+        toast.error(data.message || 'An error occurred!')
+      }
+      if (data.message?.toLowerCase().includes('email')) setErrorField('email')
+      if (data.message?.toLowerCase().includes('password')) setErrorField('password')
+      if (data.message?.toLowerCase().includes('name')) setErrorField('name')
     } finally {
       setLoading(false)
     }

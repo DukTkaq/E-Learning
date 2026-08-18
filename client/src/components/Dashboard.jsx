@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import api from '../utils/api'
 
 export default function Dashboard() {
   const [user, setUser] = useState(null)
@@ -29,12 +30,7 @@ export default function Dashboard() {
   const handleLogout = async () => {
     try {
       // Optional: Call backend logout API
-      await fetch('http://localhost:3000/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
+      await api.post('/auth/logout')
     } catch (err) {
       console.error('Logout error:', err)
     } finally {
