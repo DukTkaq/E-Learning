@@ -327,6 +327,46 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const applyInstructor = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found!' });
+    }
+
+    if (user.status === 'Pending') {
+      return res.status(400).json({ message: 'Your application is already pending approval.' });
+    }
+
+    // Role ID 2 is usually Student, Role ID 3 is Instructor.
+    // If they are already instructor or admin, we shouldn't let them apply.
+    // But verifying their current role is easier using req.user.role
+    if (req.user.role === 'Instructor' || req.user.role === 'Admin') {
+      return res.status(400).json({ message: 'You are already an Instructor or Admin.' });
+    }
+
+    user.status = 'Pending';
+    await user.save();
+
+    res.json({
+      message: 'Application submitted successfully! Please wait for Admin approval.',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: req.user.role,
+        status: user.status,
+        avatar_url: user.avatar_url
+      }
+    });
+  } catch (error) {
+    console.error('Error during apply instructor:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -334,5 +374,6 @@ module.exports = {
   updateProfile,
   changePassword,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  applyInstructor
 };
