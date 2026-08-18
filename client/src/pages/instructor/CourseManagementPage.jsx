@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BookOpen, Plus, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import CourseFormModal from '../../components/courses/CourseFormModal';
@@ -7,6 +8,7 @@ import CourseTable from '../../components/courses/CourseTable';
 import { createCourse, fetchCategories, fetchInstructorCourses, hideCourse, updateCourse } from '../../features/courses/courseApi';
 
 export default function CourseManagementPage() {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,7 @@ export default function CourseManagementPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const openCreate = () => { setEditingCourse(undefined); setModalOpen(true); };
+  const openDetail = (course) => navigate(`/instructor/courses/${course.id}`);
   const openEdit = (course) => { setEditingCourse(course); setModalOpen(true); };
 
   const submit = async (payload) => {
@@ -87,7 +90,7 @@ export default function CourseManagementPage() {
         </div>
       </div>
 
-      <CourseTable courses={courses} loading={loading} onEdit={openEdit} onHide={hide} />
+      <CourseTable courses={courses} loading={loading} onView={openDetail} onEdit={openEdit} onHide={hide} />
 
       {modalOpen && (
         <CourseFormModal course={editingCourse} categories={categories} submitting={submitting} onClose={() => setModalOpen(false)} onSubmit={submit} />

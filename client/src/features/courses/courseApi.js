@@ -1,6 +1,7 @@
 import api from '../../utils/api';
 
 export const fetchInstructorCourses = () => api.get('/instructor/courses');
+export const fetchInstructorCourse = (courseId) => api.get(`/instructor/courses/${courseId}`);
 export const fetchCategories = () => api.get('/categories');
 
 const toCourseFormData = (payload) => {
