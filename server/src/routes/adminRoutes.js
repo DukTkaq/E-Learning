@@ -14,4 +14,7 @@ router.get('/users', adminController.getAllUsers);
 router.put('/users/:id/ban', adminController.banUser);
 router.put('/users/:id/unban', adminController.unbanUser);
 
+// Route for getting dashboard metrics
+router.get('/dashboard', adminController.getDashboardMetrics);
+
 module.exports = router;
