@@ -42,14 +42,17 @@ export default function LessonPlayerPage() {
 
   const videoId = lesson ? youtubeId(lesson.video_url) : null;
   useEffect(() => {
-    if (!videoId || !youtubeHost.current) return undefined;
+    if (loading || !videoId || !youtubeHost.current) return undefined;
     let player;
     let disposed = false;
     const createPlayer = () => {
       if (disposed || !youtubeHost.current || !window.YT?.Player) return;
       player = new window.YT.Player(youtubeHost.current, {
         videoId,
-        events: { onStateChange: (event) => { if (event.data === window.YT.PlayerState.ENDED) finishedRef.current?.(); } },
+        events: {
+          onStateChange: (event) => { if (event.data === window.YT.PlayerState.ENDED) finishedRef.current?.(); },
+          onError: () => setVideoError(true),
+        },
       });
     };
     if (window.YT?.Player) createPlayer();
@@ -64,7 +67,7 @@ export default function LessonPlayerPage() {
       }
     }
     return () => { disposed = true; player?.destroy?.(); };
-  }, [videoId]);
+  }, [videoId, loading]);
 
   const submit = async (event) => {
     event.preventDefault();
