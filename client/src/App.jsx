@@ -13,6 +13,7 @@ import AdminLayout from './components/layout/AdminLayout'
 import AdminDashboard from './components/AdminDashboard'
 import InstructorLayout from './components/layout/InstructorLayout'
 import CourseManagementPage from './pages/instructor/CourseManagementPage'
+import CourseDetailPage from './pages/instructor/CourseDetailPage'
 import RevenueDashboardPage from './pages/instructor/RevenueDashboardPage'
 import ReviewsPage from './pages/instructor/ReviewsPage'
 import CartPage from './pages/student/CartPage'
@@ -112,6 +113,7 @@ function App() {
         {/* Instructor Routes */}
         <Route element={<ProtectedRoute allowedRoles={[2]} />}>
           <Route path="/instructor/courses" element={<InstructorLayout><CourseManagementPage /></InstructorLayout>} />
+          <Route path="/instructor/courses/:courseId" element={<InstructorLayout><CourseDetailPage /></InstructorLayout>} />
           <Route path="/instructor/revenue" element={<InstructorLayout><RevenueDashboardPage /></InstructorLayout>} />
           <Route path="/instructor/reviews" element={<InstructorLayout><ReviewsPage /></InstructorLayout>} />
         </Route>
