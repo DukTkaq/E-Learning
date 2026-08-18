@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { Plus, X, FolderTree } from 'lucide-react';
+import { Plus, X, FolderTree, Edit2 } from 'lucide-react';
 
 const CategoryManagement = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -33,10 +35,26 @@ const CategoryManagement = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const validateCategoryName = (name) => {
+    if (!name || name.trim() === '') {
+      return 'Category name cannot be empty.';
+    }
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 100) {
+      return 'Category name must be between 2 and 100 characters.';
+    }
+    const validFormatRegex = /^[a-zA-Z0-9\s\-_ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ]+$/;
+    if (!validFormatRegex.test(trimmedName)) {
+      return 'Category name contains invalid characters.';
+    }
+    return null;
+  };
+
   const handleCreateCategory = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error('Category name is required');
+    const validationError = validateCategoryName(formData.name);
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
@@ -55,6 +73,42 @@ const CategoryManagement = () => {
       setIsCreateModalOpen(false);
     } catch (error) {
       const errorMsg = error.response?.data?.message || 'Failed to create category';
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditClick = (category) => {
+    setEditingCategory(category);
+    setFormData({ name: category.name, description: category.description || '' });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateCategory = async (e) => {
+    e.preventDefault();
+    const validationError = validateCategoryName(formData.name);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`http://localhost:3000/api/categories/${editingCategory.id}`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      toast.success(response.data.message || 'Category updated successfully');
+      setCategories(prev => prev.map(c => c.id === editingCategory.id ? response.data.category : c));
+      setFormData({ name: '', description: '' });
+      setIsEditModalOpen(false);
+      setEditingCategory(null);
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to update category';
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
@@ -114,8 +168,14 @@ const CategoryManagement = () => {
                   <td className="py-3 px-6 font-medium text-gray-800">{category.name}</td>
                   <td className="py-3 px-6 text-sm text-gray-500 truncate max-w-xs">{category.description || '-'}</td>
                   <td className="py-3 px-6 text-right">
-                    {/* Future actions (Edit/Delete) will go here */}
-                    <span className="text-xs text-gray-400 italic">Actions pending...</span>
+                    <button
+                      onClick={() => handleEditClick(category)}
+                      className="text-gray-400 hover:text-primary transition-colors p-2 rounded-lg hover:bg-primary/10 inline-flex items-center gap-1"
+                      title="Edit Category"
+                    >
+                      <Edit2 size={16} />
+                      <span className="text-xs font-medium">Edit</span>
+                    </button>
                   </td>
                 </tr>
               ))
@@ -152,7 +212,6 @@ const CategoryManagement = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
                     placeholder="e.g. Web Development"
-                    required
                   />
                 </div>
                 
@@ -189,6 +248,76 @@ const CategoryManagement = () => {
                     <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
                   ) : null}
                   {isSubmitting ? 'Creating...' : 'Create Category'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Edit Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-800">Edit Category</h2>
+              <button 
+                onClick={() => { setIsEditModalOpen(false); setEditingCategory(null); }}
+                className="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1 hover:bg-gray-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateCategory} className="p-5">
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Category Name <span className="text-error">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="edit-name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                    placeholder="e.g. Web Development"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="edit-description" className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    id="edit-description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows="3"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm resize-none"
+                    placeholder="Brief description of this category..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setIsEditModalOpen(false); setEditingCategory(null); }}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-primary hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                  ) : null}
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
