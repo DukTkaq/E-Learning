@@ -40,7 +40,7 @@ export default function Profile() {
       const parsedUser = JSON.parse(userData)
       setUser(parsedUser)
       setEditName(parsedUser.name)
-    } catch (e) {
+    } catch {
       navigate('/login')
     }
   }, [navigate])
@@ -77,8 +77,9 @@ export default function Profile() {
 
       const data = response.data
       toast.success(data.message)
-      setUser(data.user)
-      localStorage.setItem('user', JSON.stringify(data.user))
+      const updatedUser = { ...user, ...data.user }
+      setUser(updatedUser)
+      localStorage.setItem('user', JSON.stringify(updatedUser))
       setIsEditing(false)
       setSelectedFile(null)
       setPreviewUrl(null)

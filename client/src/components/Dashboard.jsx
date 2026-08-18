@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import api from '../utils/api'
 
 export default function Dashboard() {
   const [user, setUser] = useState(null)
@@ -20,27 +19,12 @@ export default function Dashboard() {
 
     try {
       setUser(JSON.parse(userData))
-    } catch (e) {
+    } catch {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       navigate('/login')
     }
   }, [navigate])
-
-  const handleLogout = async () => {
-    try {
-      // Optional: Call backend logout API
-      await api.post('/auth/logout')
-    } catch (err) {
-      console.error('Logout error:', err)
-    } finally {
-      // Always remove token client-side
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      toast.success('Logged out successfully!')
-      navigate('/login')
-    }
-  }
 
   if (!user) return null
 

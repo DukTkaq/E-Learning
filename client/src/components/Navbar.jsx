@@ -1,10 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, User, LogOut, Settings, BookOpen } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { fetchCart } from '../features/cart/cartApi';
 
 export default function Navbar() {
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+  const [search, setSearch] = useState('');
 
   // Read auth state from localStorage
   const token = localStorage.getItem('token');
@@ -15,10 +18,25 @@ export default function Navbar() {
   if (isLoggedIn) {
     try {
       user = JSON.parse(userData);
-    } catch (e) {
+    } catch {
       console.error('Failed to parse user data');
     }
   }
+
+  useEffect(() => {
+    if (user?.role_id !== 3) return undefined;
+    const loadCartCount = () => fetchCart().then((response) => {
+      setCartCount(response.data.cart?.item_count || 0);
+    }).catch(() => {});
+    loadCartCount();
+    window.addEventListener('cart:updated', loadCartCount);
+    return () => window.removeEventListener('cart:updated', loadCartCount);
+  }, [user?.role_id]);
+
+  const handleSearch = (event) => {
+    event.preventDefault();
+    navigate(search.trim() ? `/dashboard?search=${encodeURIComponent(search.trim())}` : '/dashboard');
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -43,28 +61,30 @@ export default function Navbar() {
           </Link>
 
           {/* Search Bar (Desktop) */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
+          <form onSubmit={handleSearch} className="mx-8 hidden max-w-md flex-1 md:flex">
             <div className="relative w-full">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
               </div>
               <input
                 type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all sm:text-sm"
                 placeholder="Search courses..."
               />
             </div>
-          </div>
+          </form>
 
           {/* Right Section */}
           <div className="flex items-center gap-4">
-            {/* Cart Icon */}
-            <button className="relative p-2 text-gray-600 hover:text-primary transition-colors rounded-full hover:bg-gray-100">
-              <ShoppingCart className="w-5 h-5" />
-              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-error rounded-full">
-                2
-              </span>
-            </button>
+            {/* Cart is available to Students only. */}
+            {user?.role_id === 3 && (
+              <Link to="/cart" className="relative rounded-full p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-primary" aria-label="Shopping cart">
+                <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white">{cartCount > 99 ? '99+' : cartCount}</span>}
+              </Link>
+            )}
 
             {/* User Menu */}
             {isLoggedIn ? (
@@ -92,14 +112,22 @@ export default function Navbar() {
                         Quản lý Users
                       </Link>
                     )}
+                    {user?.role_id === 2 && (
+                      <Link to="/instructor/courses" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 border-b border-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-primary">
+                        <BookOpen className="h-4 w-4 text-primary" />
+                        Manage Courses
+                      </Link>
+                    )}
                     <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
                       <Settings className="w-4 h-4" />
                       My Profile
                     </Link>
-                    <Link to="/my-courses" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
-                      <BookOpen className="w-4 h-4" />
-                      My Courses
-                    </Link>
+                    {user?.role_id === 3 && (
+                      <Link to="/my-courses" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
+                        <BookOpen className="w-4 h-4" />
+                        My Courses
+                      </Link>
+                    )}
                     <div className="h-px bg-gray-100 my-1"></div>
                     <button 
                       onClick={handleLogout}

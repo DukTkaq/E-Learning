@@ -25,7 +25,7 @@ const CategoryManagement = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setCategories(response.data.categories || []);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load categories');
     } finally {
       setIsLoading(false);

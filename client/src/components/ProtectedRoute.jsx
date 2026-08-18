@@ -9,7 +9,14 @@ const ProtectedRoute = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  const user = JSON.parse(userStr);
+  let user;
+  try {
+    user = JSON.parse(userStr);
+  } catch {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return <Navigate to="/login" replace />;
+  }
 
   if (allowedRoles && !allowedRoles.includes(user.role_id)) {
     // Không đủ quyền -> Đá về trang Home hoặc Login (tùy ý)
