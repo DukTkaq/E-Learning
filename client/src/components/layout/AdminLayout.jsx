@@ -5,6 +5,7 @@ import {
   Users, 
   FolderTree, 
   CheckSquare, 
+  UserCheck,
   LogOut, 
   Search, 
   Bell, 
@@ -29,7 +30,8 @@ const AdminLayout = ({ children }) => {
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'User Management', path: '/admin/users', icon: Users },
     { name: 'Categories', path: '/admin/categories', icon: FolderTree },
-    { name: 'Approvals', path: '/admin/approvals', icon: CheckSquare },
+    { name: 'Course Approvals', path: '/admin/approvals', icon: CheckSquare },
+    { name: 'Instructor Approvals', path: '/admin/instructor-approvals', icon: UserCheck },
   ];
 
   return (

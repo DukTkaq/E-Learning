@@ -26,4 +26,7 @@ router.post('/forgot-password', authController.forgotPassword);
 // Reset Password API
 router.post('/reset-password', authController.resetPassword);
 
+// Apply to become an instructor API
+router.post('/apply-instructor', verifyToken, authController.applyInstructor);
+
 module.exports = router;

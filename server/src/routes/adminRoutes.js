@@ -22,4 +22,9 @@ router.patch('/courses/:id/status', adminCourseController.review);
 // Route for getting dashboard metrics
 router.get('/dashboard', adminController.getDashboardMetrics);
 
+// Instructor approval workflow
+router.get('/instructor-requests', adminController.getInstructorRequests);
+router.put('/instructor-requests/:id/approve', adminController.approveInstructor);
+router.put('/instructor-requests/:id/reject', adminController.rejectInstructor);
+
 module.exports = router;

@@ -114,3 +114,75 @@ exports.getDashboardMetrics = async (req, res) => {
     res.status(500).json({ message: 'Internal server error while fetching dashboard metrics' });
   }
 };
+
+// [GET] /api/admin/instructor-requests
+exports.getInstructorRequests = async (req, res) => {
+  try {
+    const studentRole = await Role.findOne({ where: { role_name: 'Student' } });
+    const users = await User.findAll({
+      where: {
+        status: 'Pending',
+        role_id: studentRole?.id || 3
+      },
+      attributes: ['id', 'name', 'email', 'avatar_url', 'status', 'created_at'],
+      order: [['created_at', 'ASC']]
+    });
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error('Error fetching instructor requests:', error);
+    res.status(500).json({ message: 'Internal server error while fetching requests' });
+  }
+};
+
+// [PUT] /api/admin/instructor-requests/:id/approve
+exports.approveInstructor = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found!' });
+    }
+
+    if (user.status !== 'Pending') {
+      return res.status(400).json({ message: 'User does not have a pending instructor application.' });
+    }
+
+    const instructorRole = await Role.findOne({ where: { role_name: 'Instructor' } });
+    if (!instructorRole) {
+      return res.status(500).json({ message: 'Instructor role not found in database.' });
+    }
+
+    user.role_id = instructorRole.id || 2;
+    user.status = 'Active';
+    await user.save();
+
+    res.status(200).json({ message: 'Instructor request approved successfully!', user });
+  } catch (error) {
+    console.error('Error approving instructor request:', error);
+    res.status(500).json({ message: 'Internal server error while approving request' });
+  }
+};
+
+// [PUT] /api/admin/instructor-requests/:id/reject
+exports.rejectInstructor = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found!' });
+    }
+
+    if (user.status !== 'Pending') {
+      return res.status(400).json({ message: 'User does not have a pending instructor application.' });
+    }
+
+    user.status = 'Active';
+    await user.save();
+
+    res.status(200).json({ message: 'Instructor request rejected.', user });
+  } catch (error) {
+    console.error('Error rejecting instructor request:', error);
+    res.status(500).json({ message: 'Internal server error while rejecting request' });
+  }
+};
