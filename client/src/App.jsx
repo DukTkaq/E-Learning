@@ -22,6 +22,7 @@ import CheckoutPage from './pages/student/CheckoutPage'
 import CatalogPage from './pages/student/CatalogPage'
 import MyCoursesPage from './pages/student/MyCoursesPage'
 import CourseApprovalsPage from './pages/admin/CourseApprovalsPage'
+import InstructorApprovalsPage from './pages/admin/InstructorApprovalsPage'
 import RoleHomeRedirect from './components/routing/RoleHomeRedirect'
 
 function App() {
@@ -109,6 +110,7 @@ function App() {
             </AdminLayout>
           } />
           <Route path="/admin/approvals" element={<AdminLayout><CourseApprovalsPage /></AdminLayout>} />
+          <Route path="/admin/instructor-approvals" element={<AdminLayout><InstructorApprovalsPage /></AdminLayout>} />
         </Route>
 
         {/* Instructor Routes */}

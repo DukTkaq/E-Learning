@@ -249,8 +249,8 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Change Password Section */}
-        <div className="px-8 pb-8 border-t border-gray-100 pt-8">
+        {/* Action Buttons Section */}
+        <div className="px-8 pb-8 border-t border-gray-100 pt-8 flex gap-4">
           {!isChangingPassword ? (
             <button
               onClick={() => setIsChangingPassword(true)}
@@ -259,7 +259,33 @@ export default function Profile() {
               <Lock className="w-4 h-4" />
               Change Password
             </button>
-          ) : (
+          ) : null}
+
+          {(!user.role || user.role === 'Student') && (
+            <button
+              onClick={async () => {
+                try {
+                  const api = (await import('../utils/api')).default;
+                  const res = await api.post('/auth/apply-instructor');
+                  toast.success(res.data.message);
+                  const updatedUser = { ...user, status: 'Pending' };
+                  localStorage.setItem('user', JSON.stringify(updatedUser));
+                  window.dispatchEvent(new Event('authChange'));
+                } catch (error) {
+                  toast.error(error.response?.data?.message || 'Failed to apply.');
+                }
+              }}
+              disabled={user.status === 'Pending'}
+              className="flex items-center gap-2 px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Shield className="w-4 h-4" />
+              {user.status === 'Pending' ? 'Application Pending Approval' : 'Become an Instructor'}
+            </button>
+          )}
+        </div>
+
+        {isChangingPassword && (
+          <div className="px-8 pb-8">
             <div className="max-w-md bg-gray-50 p-6 rounded-2xl border border-gray-200">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -345,8 +371,8 @@ export default function Profile() {
                 </button>
               </form>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
