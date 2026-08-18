@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { Plus, X, FolderTree, Edit2 } from 'lucide-react';
+import { Plus, X, FolderTree, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 
 const CategoryManagement = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [deletingCategory, setDeletingCategory] = useState(null);
   const [formData, setFormData] = useState({ name: '', description: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -115,6 +117,33 @@ const CategoryManagement = () => {
     }
   };
 
+  const handleDeleteClick = (category) => {
+    setDeletingCategory(category);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:3000/api/categories/${deletingCategory.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      toast.success('Category deleted successfully');
+      setCategories(prev => prev.filter(c => c.id !== deletingCategory.id));
+      setIsDeleteModalOpen(false);
+      setDeletingCategory(null);
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || 'Failed to delete category';
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -168,14 +197,24 @@ const CategoryManagement = () => {
                   <td className="py-3 px-6 font-medium text-gray-800">{category.name}</td>
                   <td className="py-3 px-6 text-sm text-gray-500 truncate max-w-xs">{category.description || '-'}</td>
                   <td className="py-3 px-6 text-right">
-                    <button
-                      onClick={() => handleEditClick(category)}
-                      className="text-gray-400 hover:text-primary transition-colors p-2 rounded-lg hover:bg-primary/10 inline-flex items-center gap-1"
-                      title="Edit Category"
-                    >
-                      <Edit2 size={16} />
-                      <span className="text-xs font-medium">Edit</span>
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleEditClick(category)}
+                        className="text-gray-400 hover:text-primary transition-colors p-2 rounded-lg hover:bg-primary/10 inline-flex items-center gap-1"
+                        title="Edit Category"
+                      >
+                        <Edit2 size={16} />
+                        <span className="text-xs font-medium">Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(category)}
+                        className="text-gray-400 hover:text-error transition-colors p-2 rounded-lg hover:bg-error/10 inline-flex items-center gap-1"
+                        title="Delete Category"
+                      >
+                        <Trash2 size={16} />
+                        <span className="text-xs font-medium">Delete</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -321,6 +360,45 @@ const CategoryManagement = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-error/10 text-error rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle size={32} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800 mb-2">Delete Category?</h2>
+              <p className="text-gray-500 text-sm mb-6">
+                Are you sure you want to delete the category <span className="font-semibold text-gray-800">"{deletingCategory?.name}"</span>? This action cannot be undone.
+              </p>
+              
+              <div className="flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setIsDeleteModalOpen(false); setDeletingCategory(null); }}
+                  className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors w-full"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={isSubmitting}
+                  className="bg-error hover:opacity-90 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 w-full"
+                >
+                  {isSubmitting ? (
+                    <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                  {isSubmitting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

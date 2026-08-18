@@ -103,3 +103,28 @@ exports.updateCategory = async (req, res) => {
     res.status(500).json({ message: 'Internal server error while updating category' });
   }
 };
+
+// [DELETE] /api/categories/:id
+exports.deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await Category.findByPk(id);
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    await category.destroy();
+
+    res.json({ message: 'Category deleted successfully', id });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    
+    // Check for foreign key constraint violation
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      return res.status(400).json({ message: 'Cannot delete category because it contains courses.' });
+    }
+    
+    res.status(500).json({ message: 'Internal server error while deleting category' });
+  }
+};
