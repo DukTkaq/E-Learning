@@ -18,9 +18,9 @@ export default function CheckoutSummary({ cart, submitting }) {
         <span>Subtotal</span><span>{currency.format(Number(cart.subtotal))}</span>
       </div>
       <button type="submit" disabled={submitting} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-3 font-bold text-white shadow-lg shadow-primary/20 disabled:opacity-60">
-        {submitting && <LoaderCircle className="animate-spin" size={18} />} Pay & enroll
+        {submitting && <LoaderCircle className="animate-spin" size={18} />} Continue to VNPay
       </button>
-      <p className="mt-3 text-center text-xs text-gray-400">Demo payment only — no real charge is made.</p>
+      <p className="mt-3 text-center text-xs text-gray-400">Sandbox environment — use VNPay test credentials only.</p>
     </aside>
   );
 }

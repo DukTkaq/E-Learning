@@ -5,14 +5,10 @@ export default function PaymentDetailsPanel({ form, onChange }) {
     <article className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
       <h2 className="text-lg font-bold text-slate-800">Payment details</h2>
       <div className="mt-5 space-y-5">
-        <label className="block text-sm font-semibold text-slate-700">
-          Payment method
-          <select name="payment_method" value={form.payment_method} onChange={updateField} className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-normal outline-none focus:border-primary">
-            <option value="MockCard">Mock card (project demo)</option>
-            <option value="BankTransfer">Bank transfer</option>
-            <option value="Cash">Cash</option>
-          </select>
-        </label>
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <p className="font-semibold text-slate-800">VNPay Sandbox</p>
+          <p className="mt-1 text-sm leading-6 text-gray-500">You will continue on VNPay to choose QR, domestic bank or international card.</p>
+        </div>
 
         <label className="block text-sm font-semibold text-slate-700">
           Coupon code <span className="font-normal text-gray-400">(optional)</span>
