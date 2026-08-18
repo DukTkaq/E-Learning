@@ -7,6 +7,12 @@ require('./models'); // Load all models and associations
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+const instructorCourseRoutes = require('./routes/instructorCourseRoutes');
+const instructorRoutes = require('./routes/instructorRoutes');
+const cartRoutes = require('./routes/cartRoutes');
+const checkoutRoutes = require('./routes/checkoutRoutes');
+const catalogRoutes = require('./routes/catalogRoutes');
+const errorHandler = require('./middlewares/errorMiddleware');
 
 const app = express();
 
@@ -22,10 +28,17 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/instructor/courses', instructorCourseRoutes);
+app.use('/api/instructor', instructorRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/checkout', checkoutRoutes);
+app.use('/api/courses', catalogRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the E-Learning API!' });
 });
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 

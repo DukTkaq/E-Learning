@@ -1,8 +1,7 @@
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Register from './components/Register'
 import Login from './components/Login'
-import Dashboard from './components/Dashboard'
 import Layout from './components/Layout'
 import Profile from './components/Profile'
 import ForgotPassword from './components/ForgotPassword'
@@ -12,6 +11,16 @@ import CategoryManagement from './components/CategoryManagement'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './components/layout/AdminLayout'
 import AdminDashboard from './components/AdminDashboard'
+import InstructorLayout from './components/layout/InstructorLayout'
+import CourseManagementPage from './pages/instructor/CourseManagementPage'
+import RevenueDashboardPage from './pages/instructor/RevenueDashboardPage'
+import ReviewsPage from './pages/instructor/ReviewsPage'
+import CartPage from './pages/student/CartPage'
+import CheckoutPage from './pages/student/CheckoutPage'
+import CatalogPage from './pages/student/CatalogPage'
+import MyCoursesPage from './pages/student/MyCoursesPage'
+import CourseApprovalsPage from './pages/admin/CourseApprovalsPage'
+import RoleHomeRedirect from './components/routing/RoleHomeRedirect'
 
 function App() {
   return (
@@ -31,7 +40,7 @@ function App() {
       />
 
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<RoleHomeRedirect />} />
         
         {/* Auth Routes */}
         <Route path="/register" element={
@@ -71,11 +80,9 @@ function App() {
         } />
 
         {/* Main Routes (With Navbar) */}
-        <Route path="/dashboard" element={
-          <Layout>
-            <Dashboard />
-          </Layout>
-        } />
+        <Route element={<ProtectedRoute allowedRoles={[3]} />}>
+          <Route path="/dashboard" element={<Layout><CatalogPage /></Layout>} />
+        </Route>
         <Route path="/profile" element={
           <Layout>
             <Profile />
@@ -95,10 +102,25 @@ function App() {
             </AdminLayout>
           } />
           <Route path="/admin/categories" element={
-            <Layout>
+            <AdminLayout>
               <CategoryManagement />
-            </Layout>
+            </AdminLayout>
           } />
+          <Route path="/admin/approvals" element={<AdminLayout><CourseApprovalsPage /></AdminLayout>} />
+        </Route>
+
+        {/* Instructor Routes */}
+        <Route element={<ProtectedRoute allowedRoles={[2]} />}>
+          <Route path="/instructor/courses" element={<InstructorLayout><CourseManagementPage /></InstructorLayout>} />
+          <Route path="/instructor/revenue" element={<InstructorLayout><RevenueDashboardPage /></InstructorLayout>} />
+          <Route path="/instructor/reviews" element={<InstructorLayout><ReviewsPage /></InstructorLayout>} />
+        </Route>
+
+        {/* Student Commerce Routes */}
+        <Route element={<ProtectedRoute allowedRoles={[3]} />}>
+          <Route path="/cart" element={<Layout><CartPage /></Layout>} />
+          <Route path="/checkout" element={<Layout><CheckoutPage /></Layout>} />
+          <Route path="/my-courses" element={<Layout><MyCoursesPage /></Layout>} />
         </Route>
       </Routes>
     </Router>

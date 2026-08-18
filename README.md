@@ -17,9 +17,21 @@ Dự án được chia làm 2 thư mục ngang hàng (Monorepo):
 ### Cấu trúc Backend (`server/`)
 - `src/config/`: Cấu hình hệ thống (Database, Cloudinary, v.v.)
 - `src/controllers/`: Xử lý logic nghiệp vụ
+- `src/services/`: Chứa business logic và transaction, giữ controller gọn
 - `src/middlewares/`: Chứa các hàm chặn (Auth, Validate, v.v.)
 - `src/models/`: Định nghĩa các bảng trong Database (Sequelize)
 - `src/routes/`: Định tuyến API
+
+### Feature map (tìm code theo chức năng)
+
+| Chức năng | Frontend | Backend |
+| --- | --- | --- |
+| Admin duyệt khóa học | `client/src/pages/admin/`, `client/src/components/admin/`, `client/src/features/admin/` | `adminCourseController.js`, `adminCourseService.js`, `adminRoutes.js` |
+| Student xem catalog | `client/src/pages/student/CatalogPage.jsx`, `client/src/components/catalog/`, `client/src/features/catalog/` | `catalogController.js`, `catalogService.js`, `catalogRoutes.js` |
+| Giỏ hàng | `client/src/pages/student/CartPage.jsx`, `client/src/components/cart/`, `client/src/features/cart/` | `cartController.js`, `cartService.js`, `cartRoutes.js` |
+| Checkout | `client/src/pages/student/CheckoutPage.jsx`, `client/src/components/checkout/` | `checkoutController.js`, `checkoutService.js`, `checkoutRoutes.js` |
+| Khóa học đã mua | `client/src/pages/student/MyCoursesPage.jsx`, `client/src/components/enrollments/` | `catalogService.listMyCourses()` |
+| Instructor quản lý khóa học | `client/src/pages/instructor/CourseManagementPage.jsx`, `client/src/components/courses/` | `instructorCourseController.js`, `courseService.js`, `instructorCourseRoutes.js` |
 
 ---
 
@@ -31,6 +43,7 @@ Dự án được chia làm 2 thư mục ngang hàng (Monorepo):
 2. Tạo một file mới tên là `.env`.
 3. Copy toàn bộ nội dung từ file `server/.env.example` dán vào file `.env` vừa tạo.
 4. **Liên hệ Team Leader** để lấy mật khẩu Database thực tế điền vào biến `DATABASE_URL` trong file `.env`.
+5. Lấy **secret key** của Supabase tại Project Settings → API Keys và điền vào `SUPABASE_SECRET_KEY`. Key này chỉ dùng ở backend để upload thumbnail khóa học; không đưa vào thư mục `client/` hoặc commit lên Git.
 
 *(Lưu ý: File `.env` chứa thông tin nhạy cảm nên đã được đưa vào `.gitignore`, tuyệt đối không cố gắng push file này lên Github).*
 
@@ -70,7 +83,7 @@ Hãy ấn giữ nút `Ctrl` (hoặc `Cmd` trên Mac) và **click chuột thẳng
    - Email: `admin@fpt.edu.vn`
    - Password: `Password123`
 2. **Instructor (Giảng viên)**
-   - Email: `instructor@fpt.edu.vn`
+   - Email: `teacher@fpt.edu.vn`
    - Password: `Password123`
 3. **Student (Học viên)**
    - Email: `student@fpt.edu.vn`

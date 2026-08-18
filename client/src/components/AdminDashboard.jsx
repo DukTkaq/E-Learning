@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Users, GraduationCap, BookOpen, DollarSign, TrendingUp } from 'lucide-react';
 import { 
   LineChart, 
@@ -25,11 +25,7 @@ const AdminDashboard = () => {
   const [timeRange, setTimeRange] = useState('last_7_days');
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [timeRange]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -45,13 +41,17 @@ const AdminDashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const statCards = [
-    { title: 'Total Users', value: metrics.totalUsers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { title: 'Total Instructors', value: metrics.totalInstructors, icon: GraduationCap, color: 'text-purple-600', bg: 'bg-purple-100' },
-    { title: 'Published Courses', value: metrics.totalCourses, icon: BookOpen, color: 'text-orange-600', bg: 'bg-orange-100' },
-    { title: 'Total Revenue', value: `$${metrics.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+    { title: 'Total Users', value: metrics.totalUsers, icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
+    { title: 'Total Instructors', value: metrics.totalInstructors, icon: GraduationCap, color: 'text-secondary', bg: 'bg-secondary/10' },
+    { title: 'Published Courses', value: metrics.totalCourses, icon: BookOpen, color: 'text-accent', bg: 'bg-accent/10' },
+    { title: 'Total Revenue', value: `$${metrics.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-success', bg: 'bg-success/10' },
   ];
 
   return (

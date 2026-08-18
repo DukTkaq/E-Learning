@@ -15,6 +15,14 @@ const Review = sequelize.define('Review', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  instructor_reply: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  replied_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
   user_id: {
     type: DataTypes.UUID,
     allowNull: false

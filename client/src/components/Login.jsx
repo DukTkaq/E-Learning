@@ -56,8 +56,12 @@ export default function Login() {
       toast.success(data.message)
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
-      // Redirect to dashboard
-      navigate('/dashboard')
+      const destinations = {
+        1: '/admin/dashboard',
+        2: '/instructor/courses',
+        3: '/dashboard',
+      }
+      navigate(destinations[data.user.role_id] || '/dashboard')
     } catch (err) {
       const data = err.response?.data || {}
       // Skip toast if it's a ban error because the global interceptor already shows a SweetAlert popup
