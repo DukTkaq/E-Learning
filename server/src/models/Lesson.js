@@ -19,6 +19,16 @@ const Lesson = sequelize.define('Lesson', {
     type: DataTypes.UUID,
     allowNull: false
   },
+  order_index: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+  is_final: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
   created_at: {
     type: DataTypes.DATE,
     allowNull: true
