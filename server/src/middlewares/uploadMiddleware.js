@@ -29,10 +29,40 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-const upload = multer({ 
+const avatarUpload = multer({ 
   storage: storage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
   fileFilter: fileFilter
 });
 
-module.exports = upload;
+const videoUploadDir = path.join(__dirname, '../../public/uploads/videos');
+if (!fs.existsSync(videoUploadDir)) {
+  fs.mkdirSync(videoUploadDir, { recursive: true });
+}
+
+const videoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, videoUploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'video-' + uniqueSuffix + ext);
+  }
+});
+
+const videoFileFilter = (req, file, cb) => {
+  if (!file.originalname.match(/\.(mp4|MP4|mov|MOV|avi|AVI|mkv|MKV|webm|WEBM)$/)) {
+    req.fileValidationError = 'Only video files are allowed!';
+    return cb(new Error('Only video files are allowed!'), false);
+  }
+  cb(null, true);
+};
+
+const videoUpload = multer({
+  storage: videoStorage,
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2GB limit
+  fileFilter: videoFileFilter
+});
+
+module.exports = { avatarUpload, videoUpload };
