@@ -36,7 +36,7 @@ Course.hasMany(Lesson, { foreignKey: 'course_id' });
 Lesson.belongsTo(Course, { foreignKey: 'course_id' });
 
 // Lesson & Quiz
-Lesson.hasMany(Quiz, { foreignKey: 'lesson_id' });
+Lesson.hasOne(Quiz, { foreignKey: 'lesson_id' });
 Quiz.belongsTo(Lesson, { foreignKey: 'lesson_id' });
 
 // Quiz & Question

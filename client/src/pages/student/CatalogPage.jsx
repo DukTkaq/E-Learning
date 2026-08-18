@@ -35,6 +35,10 @@ export default function CatalogPage() {
   }, [categoryId, searchParams]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    window.addEventListener('cart:updated', load);
+    return () => window.removeEventListener('cart:updated', load);
+  }, [load]);
   useEffect(() => { setSearch(searchParams.get('search') || ''); }, [searchParams]);
 
   const applySearch = (event) => {

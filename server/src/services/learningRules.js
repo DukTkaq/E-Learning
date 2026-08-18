@@ -20,6 +20,9 @@ const calculateQuizResult = (questions, submittedAnswers) => {
     || questions.some((question) => !normalizeAnswer(submittedAnswers[question.id]))) {
     throw new Error('You must answer every question.');
   }
+  if (questions.some((question) => !['A', 'B', 'C', 'D'].includes(normalizeAnswer(submittedAnswers[question.id])))) {
+    throw new Error('Every answer must be A, B, C, or D.');
+  }
 
   const feedback = questions.map((question) => {
     const submitted = normalizeAnswer(submittedAnswers[question.id]);

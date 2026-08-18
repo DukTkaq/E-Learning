@@ -19,6 +19,10 @@ export default function CourseDetailPage() {
 
   const load = useCallback(() => fetchCourseDetail(courseId).then((response) => setCourse(response.data.course)).catch((error) => toast.error(error.response?.data?.message || 'Could not load course.')).finally(() => setLoading(false)), [courseId]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    window.addEventListener('cart:updated', load);
+    return () => window.removeEventListener('cart:updated', load);
+  }, [load]);
 
   const add = async () => {
     const token = localStorage.getItem('token');

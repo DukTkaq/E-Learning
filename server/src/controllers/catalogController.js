@@ -12,6 +12,8 @@ const {
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 const COURSE_INCLUDE = [
   { model: Category, attributes: ['id', 'name'] },
   { model: User, as: 'Instructor', attributes: ['id', 'name', 'avatar_url'] },
@@ -90,6 +92,7 @@ exports.mine = asyncHandler(async (req, res) => {
 });
 
 exports.detail = asyncHandler(async (req, res) => {
+  if (!UUID.test(String(req.params.courseId))) throw new AppError(400, 'Course ID must be a valid UUID.');
   const course = await Course.findOne({
     where: { id: req.params.courseId, status: 'Approved' },
     include: [

@@ -47,6 +47,12 @@ test('calculateQuizResult rejects incomplete and unknown answers', () => {
     }),
     /unknown question/i,
   );
+  assert.throws(
+    () => calculateQuizResult(questions, {
+      q1: 'A', q2: 'B', q3: 'C', q4: 'D', q5: 'Z',
+    }),
+    /A, B, C, or D/i,
+  );
 });
 
 test('getQuizState locks an unwatched lesson and exposes three attempts after completion', () => {

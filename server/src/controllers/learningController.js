@@ -12,7 +12,11 @@ const requireUuid = (value, label) => {
 };
 
 const loadEnrollment = async (userId, courseId, transaction) => {
-  const enrollment = await Enrollment.findOne({ where: { user_id: userId, course_id: courseId }, transaction });
+  const enrollment = await Enrollment.findOne({
+    where: { user_id: userId, course_id: courseId },
+    transaction,
+    ...(transaction ? { lock: transaction.LOCK.UPDATE } : {}),
+  });
   if (!enrollment) throw new AppError(403, 'You must be enrolled in this course.');
   const course = await Course.findOne({ where: { id: courseId, status: 'Approved' }, transaction });
   if (!course) throw new AppError(409, 'This course is not available for learning.');
@@ -137,12 +141,18 @@ exports.submitQuiz = asyncHandler(async (req, res) => {
     const questions = await Question.findAll({ where: { quiz_id: quiz.id }, order: [['created_at', 'ASC']], transaction });
     let grade;
     try { grade = calculateQuizResult(questions, req.body?.answers); } catch (error) { throw new AppError(400, error.message); }
-    const attempt = await QuizAttempt.create({
-      user_id: req.user.id, course_id: quiz.Lesson.course_id, lesson_id: quiz.lesson_id, quiz_id: quiz.id,
-      watch_cycle: state.watch_cycle, attempt_number: state.attempts_used + 1,
-      correct_count: grade.correctCount, question_count: grade.questionCount, score: grade.score,
-      passed: grade.passed, answers: req.body.answers, created_at: new Date(),
-    }, { transaction });
+    let attempt;
+    try {
+      attempt = await QuizAttempt.create({
+        user_id: req.user.id, course_id: quiz.Lesson.course_id, lesson_id: quiz.lesson_id, quiz_id: quiz.id,
+        watch_cycle: state.watch_cycle, attempt_number: state.attempts_used + 1,
+        correct_count: grade.correctCount, question_count: grade.questionCount, score: grade.score,
+        passed: grade.passed, answers: req.body.answers, created_at: new Date(),
+      }, { transaction });
+    } catch (error) {
+      if (error.name === 'SequelizeUniqueConstraintError') throw new AppError(409, 'This quiz attempt was already submitted. Refresh and try again.');
+      throw error;
+    }
     return { attempt, grade, state: getQuizState({ watchCycle: state.watch_cycle, attempts: [...attempts, attempt] }) };
   });
   res.status(201).json({ attempt: { ...response.attempt.toJSON(), feedback: response.grade.feedback }, quiz_state: response.state });
