@@ -17,6 +17,7 @@ import CourseDetailPage from './pages/instructor/CourseDetailPage'
 import LessonManagementPage from './pages/instructor/LessonManagementPage'
 import RevenueDashboardPage from './pages/instructor/RevenueDashboardPage'
 import ReviewsPage from './pages/instructor/ReviewsPage'
+import VoucherManagementPage from './pages/instructor/VoucherManagementPage'
 import CartPage from './pages/student/CartPage'
 import CheckoutPage from './pages/student/CheckoutPage'
 import VnpayResultPage from './pages/student/VnpayResultPage'
@@ -119,6 +120,7 @@ function App() {
           <Route path="/instructor/courses" element={<InstructorLayout><CourseManagementPage /></InstructorLayout>} />
           <Route path="/instructor/courses/:courseId" element={<InstructorLayout><CourseDetailPage /></InstructorLayout>} />
           <Route path="/instructor/courses/:courseId/lessons" element={<InstructorLayout><LessonManagementPage /></InstructorLayout>} />
+          <Route path="/instructor/vouchers" element={<InstructorLayout><VoucherManagementPage /></InstructorLayout>} />
           <Route path="/instructor/revenue" element={<InstructorLayout><RevenueDashboardPage /></InstructorLayout>} />
           <Route path="/instructor/reviews" element={<InstructorLayout><ReviewsPage /></InstructorLayout>} />
         </Route>

@@ -13,6 +13,7 @@ const instructorRoutes = require('./routes/instructorRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const checkoutRoutes = require('./routes/checkoutRoutes');
 const catalogRoutes = require('./routes/catalogRoutes');
+const voucherRoutes = require('./routes/voucherRoutes');
 const errorHandler = require('./middlewares/errorMiddleware');
 
 const app = express();
@@ -31,6 +32,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/instructor/courses', instructorCourseRoutes);
 app.use('/api/instructor/courses/:courseId/lessons', lessonRoutes);
+app.use('/api/instructor/vouchers', voucherRoutes);
 app.use('/api/instructor', instructorRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/checkout', checkoutRoutes);
