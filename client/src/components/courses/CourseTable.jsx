@@ -1,10 +1,10 @@
-import { Edit3, Eye, EyeOff, Image } from 'lucide-react';
+import { Edit3, Eye, EyeOff, Image, List } from 'lucide-react';
 import CourseStatusBadge from './CourseStatusBadge';
 import { resolveAssetUrl } from '../../utils/assets';
 
 const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
 
-export default function CourseTable({ courses, loading, onView, onEdit, onHide }) {
+export default function CourseTable({ courses, loading, onView, onEdit, onHide, onViewLessons }) {
   if (loading) {
     return <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center text-gray-500 shadow-sm">Loading courses...</div>;
   }
@@ -52,6 +52,9 @@ export default function CourseTable({ courses, loading, onView, onEdit, onHide }
                 <td className="px-6 py-4">
                   <div className="flex justify-end gap-2">
                     <button type="button" onClick={() => onView(course)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"><Eye size={16} /> View</button>
+                    {onViewLessons && (
+                      <button type="button" onClick={() => onViewLessons(course)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-secondary hover:bg-secondary/10"><List size={16} /> Lessons</button>
+                    )}
                     <button type="button" onClick={() => onEdit(course)} disabled={course.status === 'Hidden'} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"><Edit3 size={16} /> Edit</button>
                     <button type="button" onClick={() => onHide(course)} disabled={course.status === 'Hidden'} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-error hover:bg-error/10 disabled:cursor-not-allowed disabled:opacity-40"><EyeOff size={16} /> Hide</button>
                   </div>

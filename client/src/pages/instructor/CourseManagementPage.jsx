@@ -34,6 +34,7 @@ export default function CourseManagementPage() {
   const openCreate = () => { setEditingCourse(undefined); setModalOpen(true); };
   const openDetail = (course) => navigate(`/instructor/courses/${course.id}`);
   const openEdit = (course) => { setEditingCourse(course); setModalOpen(true); };
+  const openLessons = (course) => navigate(`/instructor/courses/${course.id}/lessons`);
 
   const submit = async (payload) => {
     setSubmitting(true);
@@ -90,7 +91,7 @@ export default function CourseManagementPage() {
         </div>
       </div>
 
-      <CourseTable courses={courses} loading={loading} onView={openDetail} onEdit={openEdit} onHide={hide} />
+      <CourseTable courses={courses} loading={loading} onView={openDetail} onEdit={openEdit} onHide={hide} onViewLessons={openLessons} />
 
       {modalOpen && (
         <CourseFormModal course={editingCourse} categories={categories} submitting={submitting} onClose={() => setModalOpen(false)} onSubmit={submit} />
