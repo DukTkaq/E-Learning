@@ -14,6 +14,8 @@ const Payment = require('./Payment');
 const Enrollment = require('./Enrollment');
 const Certificate = require('./Certificate');
 const Review = require('./Review');
+const LessonProgress = require('./LessonProgress');
+const QuizAttempt = require('./QuizAttempt');
 
 // === DEFINE ASSOCIATIONS ===
 
@@ -97,6 +99,22 @@ Review.belongsTo(User, { foreignKey: 'user_id' });
 Course.hasMany(Review, { foreignKey: 'course_id' });
 Review.belongsTo(Course, { foreignKey: 'course_id' });
 
+User.hasMany(LessonProgress, { foreignKey: 'user_id' });
+LessonProgress.belongsTo(User, { foreignKey: 'user_id' });
+Course.hasMany(LessonProgress, { foreignKey: 'course_id' });
+LessonProgress.belongsTo(Course, { foreignKey: 'course_id' });
+Lesson.hasMany(LessonProgress, { foreignKey: 'lesson_id' });
+LessonProgress.belongsTo(Lesson, { foreignKey: 'lesson_id' });
+
+User.hasMany(QuizAttempt, { foreignKey: 'user_id' });
+QuizAttempt.belongsTo(User, { foreignKey: 'user_id' });
+Course.hasMany(QuizAttempt, { foreignKey: 'course_id' });
+QuizAttempt.belongsTo(Course, { foreignKey: 'course_id' });
+Lesson.hasMany(QuizAttempt, { foreignKey: 'lesson_id' });
+QuizAttempt.belongsTo(Lesson, { foreignKey: 'lesson_id' });
+Quiz.hasMany(QuizAttempt, { foreignKey: 'quiz_id' });
+QuizAttempt.belongsTo(Quiz, { foreignKey: 'quiz_id' });
+
 module.exports = {
   sequelize,
   Role,
@@ -112,5 +130,7 @@ module.exports = {
   Payment,
   Enrollment,
   Certificate,
-  Review
+  Review,
+  LessonProgress,
+  QuizAttempt
 };

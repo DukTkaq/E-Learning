@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BookOpen, Search, Sparkles } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import CourseCard from '../../components/catalog/CourseCard';
 import { addCourseToCart } from '../../features/cart/cartApi';
 import { fetchCatalog, fetchCatalogCategories } from '../../features/catalog/catalogApi';
+import { buildLoginHandoff } from '../../utils/authNavigation';
 
 export default function CatalogPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [courses, setCourses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +51,19 @@ export default function CatalogPage() {
   };
 
   const addToCart = async (courseId) => {
+    const token = localStorage.getItem('token');
+    let user;
+    try { user = JSON.parse(localStorage.getItem('user')); } catch { user = null; }
+    if (!token || !user) {
+      const handoff = buildLoginHandoff(courseId, `${location.pathname}${location.search}`);
+      sessionStorage.setItem('pendingCartIntent', JSON.stringify(handoff.intent));
+      navigate(handoff.loginPath);
+      return;
+    }
+    if (user.role_id !== 3) {
+      toast.error('Only Student accounts can add courses to cart.');
+      return;
+    }
     setAddingId(courseId);
     try {
       await addCourseToCart(courseId);

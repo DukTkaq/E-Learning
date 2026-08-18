@@ -1,16 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { User, Role } = require('../models');
 
-const verifyToken = async (req, res, next) => {
-  const authHeader = req.header('Authorization');
-  
-  if (!authHeader) {
-    return res.status(401).json({ message: 'Token not found, access denied!' });
-  }
-
-  // Token format: "Bearer <token>"
-  const token = authHeader.split(' ')[1] || authHeader;
-
+const authenticateToken = async (token) => {
   try {
     const secret = process.env.JWT_SECRET || 'SWP391_SECRET_KEY_MOCK';
     const decoded = jwt.verify(token, secret);
@@ -27,18 +18,39 @@ const verifyToken = async (req, res, next) => {
       return res.status(403).json({ message: 'Your account has been banned or suspended. Please contact the Administrator via email admin@fpt.edu.vn for more details and support.' });
     }
 
-    // Save user info into request
-    req.user = {
+    return {
       ...decoded,
       role_id: user.role_id,
       role: user.Role?.role_name || decoded.role,
     };
-    next(); 
   } catch (error) {
+    throw error;
+  }
+};
+
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.header('Authorization');
+  if (!authHeader) return res.status(401).json({ message: 'Token not found, access denied!' });
+  try {
+    req.user = await authenticateToken(authHeader.split(' ')[1] || authHeader);
+    return next();
+  } catch {
+    return res.status(401).json({ message: 'Invalid or expired token!' });
+  }
+};
+
+const optionalAuth = async (req, res, next) => {
+  const authHeader = req.header('Authorization');
+  if (!authHeader) return next();
+  try {
+    req.user = await authenticateToken(authHeader.split(' ')[1] || authHeader);
+    return next();
+  } catch {
     return res.status(401).json({ message: 'Invalid or expired token!' });
   }
 };
 
 module.exports = {
-  verifyToken
+  verifyToken,
+  optionalAuth,
 };

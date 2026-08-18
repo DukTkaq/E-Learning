@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../utils/api'
+import { resolvePostLoginDestination } from '../utils/authNavigation'
 
 
 export default function Login() {
@@ -12,6 +13,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [errorField, setErrorField] = useState(null)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -56,12 +58,7 @@ export default function Login() {
       toast.success(data.message)
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
-      const destinations = {
-        1: '/admin/dashboard',
-        2: '/instructor/courses',
-        3: '/dashboard',
-      }
-      navigate(destinations[data.user.role_id] || '/dashboard')
+      navigate(resolvePostLoginDestination(data.user.role_id, searchParams.get('returnTo')))
     } catch (err) {
       const data = err.response?.data || {}
       // Skip toast if it's a ban error because the global interceptor already shows a SweetAlert popup
