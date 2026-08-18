@@ -10,7 +10,9 @@ const authorizeRoles = (...allowedRoles) => {
       return res.status(401).json({ message: 'Cannot verify access rights. Please log in again!' });
     }
 
-    const hasPermission = allowedRoles.includes(req.user.role);
+    const hasPermission = allowedRoles.some(
+      role => role.toLowerCase() === req.user.role.toLowerCase()
+    );
 
     if (!hasPermission) {
       return res.status(403).json({ 

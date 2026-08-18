@@ -8,6 +8,7 @@ import Profile from './components/Profile'
 import ForgotPassword from './components/ForgotPassword'
 import ResetPassword from './components/ResetPassword'
 import UserManagement from './components/UserManagement'
+import CategoryManagement from './components/CategoryManagement'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './components/layout/AdminLayout'
 import AdminDashboard from './components/AdminDashboard'
@@ -92,6 +93,11 @@ function App() {
             <AdminLayout>
               <UserManagement />
             </AdminLayout>
+          } />
+          <Route path="/admin/categories" element={
+            <Layout>
+              <CategoryManagement />
+            </Layout>
           } />
         </Route>
       </Routes>

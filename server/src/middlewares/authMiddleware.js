@@ -5,7 +5,7 @@ const verifyToken = async (req, res, next) => {
   const authHeader = req.header('Authorization');
   
   if (!authHeader) {
-    return res.status(401).json({ message: 'Access denied. No token provided!' });
+    return res.status(401).json({ message: 'Token not found, access denied!' });
   }
 
   // Token format: "Bearer <token>"
