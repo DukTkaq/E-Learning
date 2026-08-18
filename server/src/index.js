@@ -14,6 +14,8 @@ const cartRoutes = require('./routes/cartRoutes');
 const checkoutRoutes = require('./routes/checkoutRoutes');
 const catalogRoutes = require('./routes/catalogRoutes');
 const voucherRoutes = require('./routes/voucherRoutes');
+const learningRoutes = require('./routes/learningRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const errorHandler = require('./middlewares/errorMiddleware');
 
 const app = express();
@@ -37,6 +39,8 @@ app.use('/api/instructor', instructorRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/checkout', checkoutRoutes);
 app.use('/api/courses', catalogRoutes);
+app.use('/api/learning', learningRoutes);
+app.use('/api/payments', paymentRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the E-Learning API!' });

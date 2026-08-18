@@ -5,10 +5,14 @@ const {
   Category,
   Course,
   Enrollment,
+  Lesson,
+  Review,
   User,
 } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const COURSE_INCLUDE = [
   { model: Category, attributes: ['id', 'name'] },
@@ -37,16 +41,18 @@ const listCatalog = async (userId, filters = {}) => {
     ];
   }
 
-  const [courses, cart, enrollments] = await Promise.all([
-    Course.findAll({
-      where,
-      include: COURSE_INCLUDE,
-      order: [['updated_at', 'DESC'], ['created_at', 'DESC']],
-    }),
-    Cart.findOne({
-      where: { user_id: userId },
-      include: [{ model: CartItem, attributes: ['course_id'] }],
-    }),
+  const courses = await Course.findAll({
+    where,
+    include: COURSE_INCLUDE,
+    order: [['updated_at', 'DESC'], ['created_at', 'DESC']],
+  });
+
+  if (!userId) {
+    return courses.map((course) => ({ ...course.toJSON(), in_cart: false, enrolled: false }));
+  }
+
+  const [cart, enrollments] = await Promise.all([
+    Cart.findOne({ where: { user_id: userId }, include: [{ model: CartItem, attributes: ['course_id'] }] }),
     Enrollment.findAll({ where: { user_id: userId }, attributes: ['course_id'] }),
   ]);
 
@@ -76,11 +82,47 @@ const listMyCourses = async (userId) => {
 };
 
 exports.list = asyncHandler(async (req, res) => {
-  const courses = await listCatalog(req.user.id, req.query);
+  const courses = await listCatalog(String(req.user?.role || '').toLowerCase() === 'student' ? req.user.id : null, req.query);
   res.json({ courses });
 });
 
 exports.mine = asyncHandler(async (req, res) => {
   const courses = await listMyCourses(req.user.id);
   res.json({ courses });
+});
+
+exports.detail = asyncHandler(async (req, res) => {
+  if (!UUID.test(String(req.params.courseId))) throw new AppError(400, 'Course ID must be a valid UUID.');
+  const course = await Course.findOne({
+    where: { id: req.params.courseId, status: 'Approved' },
+    include: [
+      ...COURSE_INCLUDE,
+      { model: Lesson, attributes: ['id', 'title', 'order_index'], required: false },
+      { model: Review, required: false, include: [{ model: User, attributes: ['id', 'name', 'avatar_url'] }] },
+    ],
+    order: [[Lesson, 'order_index', 'ASC'], [Review, 'created_at', 'DESC']],
+  });
+  if (!course) throw new AppError(404, 'Approved course not found.');
+
+  let inCart = false;
+  let enrolled = false;
+  if (String(req.user?.role || '').toLowerCase() === 'student') {
+    const [cartItem, enrollment] = await Promise.all([
+      CartItem.findOne({ include: [{ model: Cart, where: { user_id: req.user.id } }], where: { course_id: course.id } }),
+      Enrollment.findOne({ where: { user_id: req.user.id, course_id: course.id } }),
+    ]);
+    inCart = Boolean(cartItem);
+    enrolled = Boolean(enrollment);
+  }
+
+  const json = course.toJSON();
+  const ratings = (json.Reviews || []).map((review) => Number(review.rating));
+  res.json({ course: {
+    ...json,
+    Lessons: (json.Lessons || []).sort((a, b) => a.order_index - b.order_index),
+    rating_average: ratings.length ? Number((ratings.reduce((sum, value) => sum + value, 0) / ratings.length).toFixed(1)) : 0,
+    rating_count: ratings.length,
+    in_cart: inCart,
+    enrolled,
+  } });
 });

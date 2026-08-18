@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, User, LogOut, Settings, BookOpen } from 'lucide-react';
+import { Search, ShoppingCart, User, LogOut, Settings, BookOpen, ReceiptText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchCart } from '../features/cart/cartApi';
 
@@ -35,7 +35,7 @@ export default function Navbar() {
 
   const handleSearch = (event) => {
     event.preventDefault();
-    navigate(search.trim() ? `/dashboard?search=${encodeURIComponent(search.trim())}` : '/dashboard');
+    navigate(search.trim() ? `/?search=${encodeURIComponent(search.trim())}` : '/');
   };
 
   const handleLogout = () => {
@@ -51,7 +51,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           
           {/* Logo */}
-          <Link to="/dashboard" className="flex-shrink-0 flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+          <Link to="/" className="flex-shrink-0 flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center shadow-sm">
               <BookOpen className="text-white w-5 h-5" />
             </div>
@@ -123,10 +123,10 @@ export default function Navbar() {
                       My Profile
                     </Link>
                     {user?.role_id === 3 && (
-                      <Link to="/my-courses" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors">
-                        <BookOpen className="w-4 h-4" />
-                        My Courses
-                      </Link>
+                      <>
+                        <Link to="/my-courses" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"><BookOpen className="w-4 h-4" /> My Courses</Link>
+                        <Link to="/payments" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"><ReceiptText className="w-4 h-4" /> Payment History</Link>
+                      </>
                     )}
                     <div className="h-px bg-gray-100 my-1"></div>
                     <button 
