@@ -19,6 +19,7 @@ import RevenueDashboardPage from './pages/instructor/RevenueDashboardPage'
 import ReviewsPage from './pages/instructor/ReviewsPage'
 import CartPage from './pages/student/CartPage'
 import CheckoutPage from './pages/student/CheckoutPage'
+import VnpayResultPage from './pages/student/VnpayResultPage'
 import CatalogPage from './pages/student/CatalogPage'
 import MyCoursesPage from './pages/student/MyCoursesPage'
 import CourseApprovalsPage from './pages/admin/CourseApprovalsPage'
@@ -126,6 +127,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={[3]} />}>
           <Route path="/cart" element={<Layout><CartPage /></Layout>} />
           <Route path="/checkout" element={<Layout><CheckoutPage /></Layout>} />
+          <Route path="/checkout/vnpay-result" element={<Layout><VnpayResultPage /></Layout>} />
           <Route path="/my-courses" element={<Layout><MyCoursesPage /></Layout>} />
         </Route>
       </Routes>

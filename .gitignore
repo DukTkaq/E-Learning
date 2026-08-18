@@ -6,3 +6,6 @@ node_modules/
 
 # User-uploaded runtime files are stored outside source control.
 server/public/uploads/
+
+# Supabase CLI runtime cache.
+supabase/.temp/
