@@ -1,16 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { User, Role } = require('../models');
 
-const verifyToken = async (req, res, next) => {
-  const authHeader = req.header('Authorization');
-  
-  if (!authHeader) {
-    return res.status(401).json({ message: 'Token not found, access denied!' });
-  }
-
-  // Token format: "Bearer <token>"
-  const token = authHeader.split(' ')[1] || authHeader;
-
+const authenticateToken = async (token) => {
   try {
     const secret = process.env.JWT_SECRET || 'SWP391_SECRET_KEY_MOCK';
     const decoded = jwt.verify(token, secret);
@@ -20,25 +11,50 @@ const verifyToken = async (req, res, next) => {
       include: [{ model: Role, attributes: ['role_name'] }],
     });
     if (!user) {
-      return res.status(401).json({ message: 'User not found!' });
+      const error = new Error('User not found!');
+      error.statusCode = 401;
+      throw error;
     }
 
     if (String(user.status).toLowerCase() === 'banned') {
-      return res.status(403).json({ message: 'Your account has been banned or suspended. Please contact the Administrator via email admin@fpt.edu.vn for more details and support.' });
+      const error = new Error('Your account has been banned or suspended. Please contact the Administrator via email admin@fpt.edu.vn for more details and support.');
+      error.statusCode = 403;
+      throw error;
     }
 
-    // Save user info into request
-    req.user = {
+    return {
       ...decoded,
       role_id: user.role_id,
       role: user.Role?.role_name || decoded.role,
     };
-    next(); 
   } catch (error) {
-    return res.status(401).json({ message: 'Invalid or expired token!' });
+    throw error;
+  }
+};
+
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.header('Authorization');
+  if (!authHeader) return res.status(401).json({ message: 'Token not found, access denied!' });
+  try {
+    req.user = await authenticateToken(authHeader.split(' ')[1] || authHeader);
+    return next();
+  } catch (error) {
+    return res.status(error.statusCode || 401).json({ message: error.statusCode ? error.message : 'Invalid or expired token!' });
+  }
+};
+
+const optionalAuth = async (req, res, next) => {
+  const authHeader = req.header('Authorization');
+  if (!authHeader) return next();
+  try {
+    req.user = await authenticateToken(authHeader.split(' ')[1] || authHeader);
+    return next();
+  } catch (error) {
+    return res.status(error.statusCode || 401).json({ message: error.statusCode ? error.message : 'Invalid or expired token!' });
   }
 };
 
 module.exports = {
-  verifyToken
+  verifyToken,
+  optionalAuth,
 };
