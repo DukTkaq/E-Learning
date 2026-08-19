@@ -5,7 +5,7 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const COURSE_INCLUDE = {
   model: Course,
-  attributes: ['id', 'title', 'description', 'thumbnail', 'price', 'status'],
+  attributes: ['id', 'title', 'description', 'thumbnail', 'price', 'status', 'instructor_id'],
   include: [{ model: Category, attributes: ['id', 'name'] }],
 };
 
@@ -89,4 +89,62 @@ exports.addItem = asyncHandler(async (req, res) => {
 exports.removeItem = asyncHandler(async (req, res) => {
   const cart = await removeCartItem(req.user.id, req.params.courseId);
   res.json({ message: 'Course removed from cart.', cart });
+});
+
+exports.applyVoucher = asyncHandler(async (req, res) => {
+  const { code } = req.body;
+  const userId = req.user.id;
+  
+  const { Coupon } = require('../models');
+
+  // 1. Get current cart data
+  const cart = await getCartData(userId);
+  if (!cart.items || cart.items.length === 0) {
+    throw new AppError(400, 'Your cart is empty.');
+  }
+
+  if (!code) {
+    return res.json({ cart }); // if empty code, just return normal cart
+  }
+
+  // 2. Find coupon
+  const coupon = await Coupon.findOne({
+    where: sequelize.where(
+      sequelize.fn('LOWER', sequelize.col('code')),
+      code.toLowerCase()
+    )
+  });
+
+  if (!coupon) {
+    throw new AppError(400, 'Voucher code is invalid.');
+  }
+
+  // 3. Calculate discount
+  let totalDiscount = 0;
+  let appliedToAny = false;
+
+  cart.items.forEach(item => {
+    const course = item.Course;
+    if (course) {
+      const couponApplies = 
+        coupon.instructor_id === course.instructor_id &&
+        (!coupon.course_id || coupon.course_id === course.id);
+      
+      if (couponApplies) {
+        appliedToAny = true;
+        const discountAmount = (Number(course.price) * Number(coupon.discount_percent)) / 100;
+        totalDiscount += discountAmount;
+      }
+    }
+  });
+
+  if (!appliedToAny) {
+    throw new AppError(400, 'Voucher is valid but does not apply to any courses in your cart.');
+  }
+
+  cart.discount = totalDiscount;
+  cart.total = cart.subtotal - totalDiscount;
+  cart.appliedVoucher = coupon.code;
+
+  res.json({ message: 'Voucher applied successfully.', cart });
 });
