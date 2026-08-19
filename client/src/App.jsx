@@ -15,6 +15,7 @@ import InstructorLayout from './components/layout/InstructorLayout'
 import CourseManagementPage from './pages/instructor/CourseManagementPage'
 import InstructorCourseDetailPage from './pages/instructor/CourseDetailPage'
 import LessonManagementPage from './pages/instructor/LessonManagementPage'
+import QuizManagementPage from './pages/instructor/QuizManagementPage'
 import RevenueDashboardPage from './pages/instructor/RevenueDashboardPage'
 import ReviewsPage from './pages/instructor/ReviewsPage'
 import CartPage from './pages/student/CartPage'
@@ -124,6 +125,7 @@ function App() {
           <Route path="/instructor/courses" element={<InstructorLayout><CourseManagementPage /></InstructorLayout>} />
           <Route path="/instructor/courses/:courseId" element={<InstructorLayout><InstructorCourseDetailPage /></InstructorLayout>} />
           <Route path="/instructor/courses/:courseId/lessons" element={<InstructorLayout><LessonManagementPage /></InstructorLayout>} />
+          <Route path="/instructor/courses/:courseId/lessons/:lessonId/quiz" element={<InstructorLayout><QuizManagementPage /></InstructorLayout>} />
           <Route path="/instructor/revenue" element={<InstructorLayout><RevenueDashboardPage /></InstructorLayout>} />
           <Route path="/instructor/reviews" element={<InstructorLayout><ReviewsPage /></InstructorLayout>} />
         </Route>
