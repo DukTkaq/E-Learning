@@ -179,7 +179,7 @@ export default function Profile() {
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all">
         {/* Cover Photo */}
         <div className="h-32 bg-gradient-to-r from-primary/80 to-secondary/80 w-full relative">
-          <div className="absolute -bottom-12 left-8 flex items-end space-x-4">
+          <div className="absolute -bottom-12 left-8 flex items-start space-x-4">
             <div className="relative">
               <div className="w-24 h-24 rounded-full border-4 border-white bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-3xl text-white font-bold shadow-lg transition-all">
                 {getAvatarContent()}
@@ -203,9 +203,9 @@ export default function Profile() {
                 </>
               )}
             </div>
-            <div className="mb-2">
-              <h3 className="text-2xl font-bold text-gray-800">{user.name}</h3>
-              <p className="text-primary font-medium text-sm flex items-center gap-1">
+            <div className="pt-14">
+              <h3 className="text-2xl font-bold text-gray-800 leading-tight">{user.name}</h3>
+              <p className="text-primary font-medium text-sm flex items-center gap-1 mt-0.5">
                 <Shield className="w-4 h-4" />
                 {user.role || 'Student'}
               </p>
