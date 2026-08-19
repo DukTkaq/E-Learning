@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import CourseApprovalCard from '../../components/admin/CourseApprovalCard';
 import CourseApprovalToolbar from '../../components/admin/CourseApprovalToolbar';
-import { fetchAdminCourses, reviewCourse } from '../../features/admin/adminCourseApi';
+import { fetchAdminCourses, reviewCourse, hideAdminCourse } from '../../features/admin/adminCourseApi';
 
 export default function CourseApprovalsPage() {
   const [courses, setCourses] = useState([]);
@@ -53,6 +53,29 @@ export default function CourseApprovalsPage() {
     }
   };
 
+  const handleHideCourse = async (course) => {
+    const result = await Swal.fire({
+      title: 'Delete/Hide this course?',
+      text: 'This will hide the course from the catalog due to violations. Existing students will still have access to it.',
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, hide it',
+      confirmButtonColor: '#ef4444',
+    });
+    if (!result.isConfirmed) return;
+
+    setReviewingId(course.id);
+    try {
+      await hideAdminCourse(course.id);
+      toast.success('Course hidden successfully.');
+      await load();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Could not hide this course.');
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
   return (
     <section>
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end"><div><div className="mb-2 flex items-center gap-2 text-primary"><CheckSquare size={20} /><span className="text-sm font-bold uppercase tracking-wider">Course approval</span></div><h1 className="text-3xl font-bold text-slate-900">Review submitted courses</h1><p className="mt-2 text-gray-500">Approve courses before they appear in the Student catalog.</p></div><button type="button" onClick={load} className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 font-semibold text-gray-600 shadow-sm hover:text-primary"><RefreshCw size={18} /> Refresh</button></div>
@@ -65,7 +88,7 @@ export default function CourseApprovalsPage() {
         onSearchSubmit={submitSearch}
       />
 
-      {loading ? <div className="rounded-2xl bg-white p-14 text-center text-gray-500">Loading courses...</div> : courses.length ? <div className="space-y-5">{courses.map((course) => <CourseApprovalCard key={course.id} course={course} reviewing={reviewingId === course.id} onReview={handleReview} />)}</div> : <div className="rounded-2xl border border-dashed border-primary/25 bg-white p-14 text-center"><CheckSquare className="mx-auto text-primary" size={38} /><h2 className="mt-4 text-xl font-bold text-slate-800">No courses in this view</h2><p className="mt-1 text-gray-500">Try another status or search term.</p></div>}
+      {loading ? <div className="rounded-2xl bg-white p-14 text-center text-gray-500">Loading courses...</div> : courses.length ? <div className="space-y-5">{courses.map((course) => <CourseApprovalCard key={course.id} course={course} reviewing={reviewingId === course.id} onReview={handleReview} onHide={handleHideCourse} />)}</div> : <div className="rounded-2xl border border-dashed border-primary/25 bg-white p-14 text-center"><CheckSquare className="mx-auto text-primary" size={38} /><h2 className="mt-4 text-xl font-bold text-slate-800">No courses in this view</h2><p className="mt-1 text-gray-500">Try another status or search term.</p></div>}
     </section>
   );
 }

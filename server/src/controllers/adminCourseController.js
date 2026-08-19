@@ -48,6 +48,15 @@ const reviewCourse = async (courseId, status) => {
   return Course.findByPk(courseId, { include: COURSE_INCLUDE });
 };
 
+const hideCourse = async (courseId) => {
+  const course = await Course.findByPk(courseId);
+  if (!course) throw new AppError(404, 'Course not found.');
+  if (course.status === 'Hidden') throw new AppError(409, 'Course is already hidden.');
+
+  await course.update({ status: 'Hidden', updated_at: new Date() });
+  return Course.findByPk(courseId, { include: COURSE_INCLUDE });
+};
+
 exports.list = asyncHandler(async (req, res) => {
   const courses = await listCourses(req.query);
   res.json({ courses });
@@ -56,4 +65,9 @@ exports.list = asyncHandler(async (req, res) => {
 exports.review = asyncHandler(async (req, res) => {
   const course = await reviewCourse(req.params.id, req.body.status);
   res.json({ message: `Course ${course.status.toLowerCase()} successfully.`, course });
+});
+
+exports.hide = asyncHandler(async (req, res) => {
+  const course = await hideCourse(req.params.id);
+  res.json({ message: 'Course has been hidden/deleted due to violations.', course });
 });
