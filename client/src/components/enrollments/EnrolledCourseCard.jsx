@@ -1,5 +1,6 @@
 import { Image, PlayCircle } from 'lucide-react';
 import { resolveAssetUrl } from '../../utils/assets';
+import { Link } from 'react-router-dom';
 
 const clampProgress = (value) => Math.min(100, Math.max(0, Number(value) || 0));
 
@@ -31,9 +32,9 @@ export default function EnrolledCourseCard({ enrollment }) {
           </div>
         </div>
 
-        <button type="button" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 font-semibold text-white">
+        <Link to={`/my-courses/${course?.id}`} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 font-semibold text-white">
           <PlayCircle size={18} /> Continue learning
-        </button>
+        </Link>
       </div>
     </article>
   );

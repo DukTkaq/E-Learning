@@ -1,4 +1,4 @@
-const { Lesson, Course } = require('../models');
+const { Lesson, Course, Quiz } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const fs = require('fs');
@@ -16,7 +16,11 @@ const getLessons = async (courseId) => {
 
 exports.list = asyncHandler(async (req, res) => {
   await findOwnedCourse(req.params.courseId, req.user.id);
-  const lessons = await getLessons(req.params.courseId);
+  const lessons = await Lesson.findAll({
+    where: { course_id: req.params.courseId },
+    include: [{ model: Quiz, attributes: ['id', 'title'] }],
+    order: [['order_index', 'ASC']],
+  });
   res.json({ lessons });
 });
 

@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CreditCard, LockKeyhole } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { createVnpayPayment, fetchCart } from '../../features/cart/cartApi';
 import CheckoutSummary from '../../components/checkout/CheckoutSummary';
 import PaymentDetailsPanel from '../../components/checkout/PaymentDetailsPanel';
 
 export default function CheckoutPage() {
+  const location = useLocation();
   const [cart, setCart] = useState({ items: [], subtotal: 0 });
-  const [form, setForm] = useState({ coupon_code: '' });
+  const [form, setForm] = useState({ coupon_code: location.state?.coupon_code || '' });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 

@@ -96,6 +96,10 @@ export default function LessonManagementPage() {
     }
   };
 
+  const manageQuiz = (lesson) => {
+    navigate(`/instructor/courses/${courseId}/lessons/${lesson.id}/quiz`);
+  };
+
   return (
     <section>
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -113,7 +117,7 @@ export default function LessonManagementPage() {
         </div>
       </div>
 
-      <LessonTable lessons={lessons} loading={loading} onEdit={openEdit} onDelete={remove} onMoveUp={moveUp} onMoveDown={moveDown} />
+      <LessonTable lessons={lessons} loading={loading} onEdit={openEdit} onDelete={remove} onMoveUp={moveUp} onMoveDown={moveDown} onManageQuiz={manageQuiz} />
 
       {modalOpen && (
         <LessonFormModal lesson={editingLesson} submitting={submitting} onClose={() => setModalOpen(false)} onSubmit={submit} />

@@ -9,5 +9,6 @@ router.use(verifyToken, authorizeRoles('Student'));
 router.get('/', controller.get);
 router.post('/items', controller.addItem);
 router.delete('/items/:courseId', controller.removeItem);
+router.post('/voucher', controller.applyVoucher);
 
 module.exports = router;
