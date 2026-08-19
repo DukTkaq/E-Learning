@@ -15,9 +15,10 @@ router.get('/users', adminController.getAllUsers);
 router.put('/users/:id/ban', adminController.banUser);
 router.put('/users/:id/unban', adminController.unbanUser);
 
-// Course approval workflow
+// Course approval and moderation
 router.get('/courses', adminCourseController.list);
 router.patch('/courses/:id/status', adminCourseController.review);
+router.patch('/courses/:id/hide', adminCourseController.hide);
 
 // Route for getting dashboard metrics
 router.get('/dashboard', adminController.getDashboardMetrics);
