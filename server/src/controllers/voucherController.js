@@ -75,3 +75,37 @@ exports.createVoucher = async (req, res) => {
     res.status(500).json({ message: 'Internal server error while creating voucher' });
   }
 };
+
+// [DELETE] /api/instructor/vouchers/:id
+exports.deleteVoucher = async (req, res) => {
+  try {
+    const voucherId = req.params.id;
+    const instructorId = req.user.id;
+
+    // 1. Find voucher
+    const voucher = await Coupon.findByPk(voucherId);
+    if (!voucher) {
+      return res.status(404).json({ message: 'Voucher not found.' });
+    }
+
+    // 2. Check ownership
+    if (voucher.instructor_id !== instructorId) {
+      return res.status(403).json({ message: 'You do not have permission to delete this voucher.' });
+    }
+
+    // 3. Check if used in payments
+    const { Payment } = require('../models');
+    const paymentUsingVoucher = await Payment.findOne({ where: { coupon_id: voucherId } });
+    if (paymentUsingVoucher) {
+      return res.status(400).json({ message: 'Cannot delete voucher because it has already been used by a student.' });
+    }
+
+    // 4. Delete
+    await voucher.destroy();
+
+    res.status(200).json({ message: 'Voucher deleted successfully.' });
+  } catch (error) {
+    console.error('Error deleting voucher:', error);
+    res.status(500).json({ message: 'Internal server error while deleting voucher.' });
+  }
+};

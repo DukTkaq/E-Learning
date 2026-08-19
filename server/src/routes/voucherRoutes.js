@@ -11,5 +11,6 @@ router.use(authorizeRoles('Instructor'));
 
 router.get('/', voucherController.getVouchers);
 router.post('/', voucherController.createVoucher);
+router.delete('/:id', voucherController.deleteVoucher);
 
 module.exports = router;
