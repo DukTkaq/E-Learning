@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Ticket, Plus, RefreshCw, X, Loader2 } from 'lucide-react';
+import { Ticket, Plus, RefreshCw, X, Loader2, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { fetchVouchers, createVoucher } from '../../features/voucher/voucherApi';
+import Swal from 'sweetalert2';
+import { fetchVouchers, createVoucher, deleteVoucher } from '../../features/voucher/voucherApi';
 import { fetchInstructorCourses } from '../../features/courses/courseApi';
 
 function CreateVoucherModal({ isOpen, onClose, onSuccess }) {
@@ -128,6 +129,27 @@ export default function VoucherManagementPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const handleDelete = async (voucherId, code) => {
+    const result = await Swal.fire({
+      title: 'Delete Voucher?',
+      text: `Are you sure you want to delete the voucher ${code}? This cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteVoucher(voucherId);
+        toast.success('Voucher deleted successfully.');
+        load();
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to delete voucher.');
+      }
+    }
+  };
+
   return (
     <section>
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
@@ -163,6 +185,7 @@ export default function VoucherManagementPage() {
                 <th className="px-6 py-4 font-semibold">Discount</th>
                 <th className="px-6 py-4 font-semibold">Target Course</th>
                 <th className="px-6 py-4 font-semibold">Created At</th>
+                <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -178,6 +201,15 @@ export default function VoucherManagementPage() {
                     {v.Course ? v.Course.title : <span className="text-gray-400 italic">All Courses</span>}
                   </td>
                   <td className="px-6 py-4">{new Date(v.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={() => handleDelete(v.id, v.code)}
+                      className="p-2 text-slate-400 hover:bg-error/10 hover:text-error rounded-lg transition-colors"
+                      title="Delete Voucher"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
