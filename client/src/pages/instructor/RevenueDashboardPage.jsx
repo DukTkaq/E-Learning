@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, BookOpen, CircleDollarSign, ShoppingBag } from 'lucide-react';
+import { BookOpen, CircleDollarSign, ShoppingBag } from 'lucide-react';
 import toast from 'react-hot-toast';
 import RevenueChart from '../../components/instructor/RevenueChart';
 import { fetchRevenue } from '../../features/instructor/instructorApi';
@@ -35,7 +35,6 @@ export default function RevenueDashboardPage() {
     <section>
       <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-primary"><BarChart3 size={20} /><span className="text-sm font-bold uppercase tracking-wider">UC11 Revenue Dashboard</span></div>
           <h1 className="text-3xl font-bold text-slate-900">Revenue overview</h1>
           <p className="mt-2 text-gray-500">Only successful payments for your own courses are included.</p>
         </div>

@@ -62,7 +62,7 @@ export default function CartPage() {
 
   return (
     <section>
-      <div className="mb-6"><div className="mb-2 flex items-center gap-2 text-primary"><ShoppingCart size={20} /><span className="text-sm font-bold uppercase tracking-wider">UC14 Shopping Cart</span></div><h1 className="text-3xl font-bold text-slate-900">Your cart</h1><p className="mt-2 text-gray-500">{cart.item_count || 0} course(s) ready for checkout</p></div>
+      <div className="mb-6"><h1 className="text-3xl font-bold text-slate-900">Your cart</h1><p className="mt-2 text-gray-500">{cart.item_count || 0} course(s) ready for checkout</p></div>
       {loading ? <div className="rounded-2xl bg-white p-12 text-center text-gray-500">Loading your cart...</div> : !cart.items?.length ? <div className="rounded-2xl border border-dashed border-primary/25 bg-white p-12 text-center"><ShoppingCart className="mx-auto text-primary" size={36} /><h2 className="mt-4 text-xl font-bold text-slate-800">Your cart is empty</h2><p className="mt-1 text-gray-500">Add an approved course from the course catalog.</p><Link to="/dashboard" className="mt-5 inline-flex rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 font-semibold text-white">Browse courses</Link></div> : (
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">{cart.items.map((item) => <CartItemCard key={item.id} item={item} removing={removingId === item.course_id} onRemove={remove} />)}</div>

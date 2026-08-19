@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BookOpen, Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -81,7 +81,6 @@ export default function CourseManagementPage() {
     <section>
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-primary"><BookOpen size={20} /><span className="text-sm font-bold uppercase tracking-wider">UC07 Course Management</span></div>
           <h1 className="text-3xl font-bold text-slate-900">Your courses</h1>
           <p className="mt-2 text-gray-500">{visibleCount} active course{visibleCount === 1 ? '' : 's'} · {courses.length} total</p>
         </div>
