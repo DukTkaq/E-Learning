@@ -285,11 +285,11 @@ export default function Profile() {
         </div>
 
         {isChangingPassword && (
-          <div className="px-8 pb-8">
-            <div className="max-w-md bg-gray-50 p-6 rounded-2xl border border-gray-200">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <Lock className="w-5 h-5 text-primary" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md bg-white p-7 rounded-2xl border border-gray-200 shadow-2xl relative">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <Lock className="w-6 h-6 text-primary" />
                   Change Password
                 </h3>
                 <button 
