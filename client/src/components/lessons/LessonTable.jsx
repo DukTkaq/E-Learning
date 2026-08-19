@@ -1,6 +1,6 @@
-import { ArrowDown, ArrowUp, Edit3, Trash2, Trophy, Video } from 'lucide-react';
+import { ArrowDown, ArrowUp, Edit3, Trash2, Trophy, Video, HelpCircle } from 'lucide-react';
 
-export default function LessonTable({ lessons, loading, onEdit, onDelete, onMoveUp, onMoveDown }) {
+export default function LessonTable({ lessons, loading, onEdit, onDelete, onMoveUp, onMoveDown, onManageQuiz }) {
   if (loading) {
     return <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center text-gray-500 shadow-sm">Loading lessons...</div>;
   }
@@ -18,12 +18,13 @@ export default function LessonTable({ lessons, loading, onEdit, onDelete, onMove
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left">
+        <table className="w-full min-w-[780px] text-left">
           <thead className="border-b border-gray-100 bg-slate-50 text-xs uppercase tracking-wide text-gray-500">
             <tr>
               <th className="px-6 py-4 font-semibold">#</th>
               <th className="px-6 py-4 font-semibold">Lesson</th>
               <th className="px-6 py-4 font-semibold">Video URL</th>
+              <th className="px-6 py-4 font-semibold">Quiz</th>
               <th className="px-6 py-4 font-semibold">Status</th>
               <th className="px-6 py-4 text-right font-semibold">Actions</th>
             </tr>
@@ -41,6 +42,26 @@ export default function LessonTable({ lessons, loading, onEdit, onDelete, onMove
                   </div>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate">{lesson.video_url}</td>
+                <td className="px-6 py-4">
+                  {lesson.Quiz ? (
+                    <button
+                      type="button"
+                      onClick={() => onManageQuiz(lesson)}
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+                    >
+                      <HelpCircle size={14} />
+                      {lesson.Quiz.title}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onManageQuiz(lesson)}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-primary/30 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/10"
+                    >
+                      + Add quiz
+                    </button>
+                  )}
+                </td>
                 <td className="px-6 py-4">
                   {lesson.is_final ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">

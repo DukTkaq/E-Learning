@@ -11,6 +11,16 @@ const Quiz = sequelize.define('Quiz', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  passing_score: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 70
+  },
+  max_attempts: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 3
+  },
   lesson_id: {
     type: DataTypes.UUID,
     allowNull: false
