@@ -1,4 +1,5 @@
 const STYLES = {
+  Draft: 'bg-slate-100 text-slate-600',
   Approved: 'bg-success/10 text-success',
   Pending: 'bg-accent/15 text-accent',
   Rejected: 'bg-error/10 text-error',

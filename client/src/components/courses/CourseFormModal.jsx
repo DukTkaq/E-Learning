@@ -56,7 +56,7 @@ export default function CourseFormModal({ course, categories, submitting, onClos
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900">{course ? 'Edit course' : 'Create course'}</h2>
-            <p className="mt-0.5 text-sm text-gray-500">Submitted courses start in Pending status.</p>
+            <p className="mt-0.5 text-sm text-gray-500">Courses are saved as drafts until you submit them for approval.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-gray-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Close"><X size={20} /></button>
         </div>
@@ -117,7 +117,7 @@ export default function CourseFormModal({ course, categories, submitting, onClos
             <button type="button" onClick={onClose} className="rounded-xl px-5 py-2.5 font-semibold text-gray-600 hover:bg-slate-100">Cancel</button>
             <button type="submit" disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
               {submitting && <LoaderCircle className="animate-spin" size={18} />}
-              {course ? 'Save changes' : 'Submit course'}
+              {course ? 'Save changes' : 'Save draft'}
             </button>
           </div>
         </form>

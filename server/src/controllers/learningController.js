@@ -5,6 +5,7 @@ const {
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { calculateQuizResult, getQuizState, nextWatchCycle, validateReviewInput } = require('../services/learningRules');
+const { canEnrolledStudentLearn } = require('../rules/courseStatusRules');
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const requireUuid = (value, label) => {
@@ -18,8 +19,10 @@ const loadEnrollment = async (userId, courseId, transaction) => {
     ...(transaction ? { lock: transaction.LOCK.UPDATE } : {}),
   });
   if (!enrollment) throw new AppError(403, 'You must be enrolled in this course.');
-  const course = await Course.findOne({ where: { id: courseId, status: 'Approved' }, transaction });
-  if (!course) throw new AppError(409, 'This course is not available for learning.');
+  const course = await Course.findByPk(courseId, { transaction });
+  if (!course || !canEnrolledStudentLearn(course.status)) {
+    throw new AppError(409, 'This course is not available for learning.');
+  }
   return { course, enrollment };
 };
 
