@@ -124,7 +124,7 @@ exports.getInstructorRequests = async (req, res) => {
         status: 'Pending',
         role_id: studentRole?.id || 3
       },
-      attributes: ['id', 'name', 'email', 'avatar_url', 'status', 'created_at'],
+      attributes: ['id', 'name', 'email', 'avatar_url', 'status', 'created_at', 'expertise', 'bio', 'portfolio_url'],
       order: [['created_at', 'ASC']]
     });
 
@@ -177,7 +177,7 @@ exports.rejectInstructor = async (req, res) => {
       return res.status(400).json({ message: 'User does not have a pending instructor application.' });
     }
 
-    user.status = 'Active';
+    user.status = 'Rejected';
     await user.save();
 
     res.status(200).json({ message: 'Instructor request rejected.', user });
