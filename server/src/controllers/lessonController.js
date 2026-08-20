@@ -40,7 +40,20 @@ exports.create = asyncHandler(async (req, res) => {
   }
 
   const maxOrder = lessons.length > 0 ? Math.max(...lessons.map((l) => l.order_index)) : -1;
-  const orderIndex = maxOrder + 1;
+  let orderIndex;
+
+  if (newIsFinal) {
+    orderIndex = maxOrder + 1;
+  } else {
+    const existingFinal = lessons.find((l) => l.is_final);
+    if (existingFinal) {
+      orderIndex = existingFinal.order_index;
+      existingFinal.order_index = maxOrder + 1;
+      await existingFinal.save();
+    } else {
+      orderIndex = maxOrder + 1;
+    }
+  }
 
   const lesson = await Lesson.create({
     title: title.trim(),
