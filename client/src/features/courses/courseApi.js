@@ -17,4 +17,5 @@ const toCourseFormData = (payload) => {
 
 export const createCourse = (payload) => api.post('/instructor/courses', toCourseFormData(payload));
 export const updateCourse = (courseId, payload) => api.put(`/instructor/courses/${courseId}`, toCourseFormData(payload));
+export const submitCourseForApproval = (courseId) => api.post(`/instructor/courses/${courseId}/submit`);
 export const hideCourse = (courseId) => api.patch(`/instructor/courses/${courseId}/hide`);

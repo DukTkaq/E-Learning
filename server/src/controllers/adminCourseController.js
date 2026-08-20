@@ -19,7 +19,7 @@ const listCourses = (filters = {}) => {
   if (status) {
     if (!FILTER_STATUSES.has(status)) throw new AppError(400, 'Invalid course status filter.');
     where.status = status;
-  }
+  } else where.status = { [Op.ne]: 'Draft' };
   if (search) where.title = { [Op.iLike]: `%${search}%` };
 
   return Course.findAll({
