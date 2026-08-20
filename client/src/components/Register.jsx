@@ -7,7 +7,8 @@ export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   })
   const [loading, setLoading] = useState(false)
   const [errorField, setErrorField] = useState(null)
@@ -56,12 +57,19 @@ export default function Register() {
       return
     }
 
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match!")
+      setErrorField('confirmPassword')
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await api.post('/auth/register', formData)
       const data = response.data
 
       toast.success(data.message)
-      setFormData({ name: '', email: '', password: '' })
+      setFormData({ name: '', email: '', password: '', confirmPassword: '' })
       setTimeout(() => navigate('/login'), 2000)
     } catch (err) {
       const data = err.response?.data || {}
@@ -127,6 +135,20 @@ export default function Register() {
           {errorField === 'password' && (
             <p className="mt-1 text-sm text-error font-medium">Please enter a valid password format.</p>
           )}
+        </div>
+        <div>
+          <input 
+            type="password" 
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            placeholder="Confirm Password" 
+            className={`w-full px-4 py-3 rounded-xl border bg-white/90 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 transition-all ${
+              errorField === 'confirmPassword' 
+                ? 'border-error focus:border-error focus:ring-error/20 ring-error/20' 
+                : 'border-gray-200 focus:border-primary focus:ring-primary/10'
+            }`}
+          />
         </div>
         
         <button 
