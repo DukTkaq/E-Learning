@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ListVideo, RefreshCw } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import CourseCurriculum from '../../components/courses/CourseCurriculum';
 import CourseDetailOverview from '../../components/courses/CourseDetailOverview';
 import { fetchInstructorCourse } from '../../features/courses/courseApi';
 
@@ -35,9 +36,16 @@ export default function CourseDetailPage() {
         <button type="button" onClick={() => navigate('/instructor/courses')} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-semibold text-slate-600 shadow-sm hover:border-primary/30 hover:text-primary">
           <ArrowLeft size={18} /> Back to courses
         </button>
-        <button type="button" onClick={loadCourse} disabled={loading} className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 font-semibold text-slate-500 hover:bg-white hover:text-primary disabled:opacity-50">
-          <RefreshCw size={17} className={loading ? 'animate-spin' : ''} /> Refresh
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {course && (
+            <button type="button" onClick={() => navigate(`/instructor/courses/${course.id}/lessons`)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-semibold text-slate-600 shadow-sm hover:border-primary/30 hover:text-primary">
+              <ListVideo size={18} /> Manage curriculum
+            </button>
+          )}
+          <button type="button" onClick={loadCourse} disabled={loading} className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 font-semibold text-slate-500 hover:bg-white hover:text-primary disabled:opacity-50">
+            <RefreshCw size={17} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
       </div>
 
       {loading && (
@@ -52,7 +60,12 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      {!loading && course && <CourseDetailOverview course={course} />}
+      {!loading && course && (
+        <>
+          <CourseDetailOverview course={course} />
+          <CourseCurriculum lessons={course.Lessons || []} />
+        </>
+      )}
     </section>
   );
 }
