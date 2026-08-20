@@ -105,10 +105,6 @@ const AdminLayout = ({ children }) => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-gray-400 hover:text-primary transition-colors rounded-full hover:bg-primary/5">
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full ring-2 ring-white"></span>
-            </button>
             <div className="h-8 w-px bg-gray-200 mx-1"></div>
             <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
               <div className="text-right hidden sm:block">
