@@ -18,7 +18,7 @@ export default function QuizManagementPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [quizTitle, setQuizTitle] = useState('');
-  const [passingScore, setPassingScore] = useState(70);
+  const [passingScore, setPassingScore] = useState(40);
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [dirty, setDirty] = useState(false);
 
@@ -216,7 +216,7 @@ export default function QuizManagementPage() {
               min={1}
               max={100}
               value={passingScore}
-              onChange={(e) => { setPassingScore(parseInt(e.target.value, 10) || 70); setDirty(true); }}
+              onChange={(e) => { setPassingScore(parseInt(e.target.value, 10) || 40); setDirty(true); }}
               className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
             />
           </label>

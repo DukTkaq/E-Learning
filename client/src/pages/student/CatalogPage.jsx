@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BookOpen, Search, Sparkles } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import CourseCard from '../../components/catalog/CourseCard';
+import Pagination from '../../components/common/Pagination';
 import { addCourseToCart } from '../../features/cart/cartApi';
 import { fetchCatalog, fetchCatalogCategories } from '../../features/catalog/catalogApi';
 import { buildLoginHandoff } from '../../utils/authNavigation';
+import { clampPage } from '../../utils/pagination';
 
 export default function CatalogPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -16,23 +18,28 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true);
   const [addingId, setAddingId] = useState(null);
   const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [pagination, setPagination] = useState({ page: 1, limit: 6, total_items: 0, total_pages: 0 });
+  const catalogRef = useRef(null);
   const categoryId = searchParams.get('category_id') || '';
+  const requestedPage = Number(searchParams.get('page'));
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [courseResponse, categoryResponse] = await Promise.all([
-        fetchCatalog({ search: searchParams.get('search') || undefined, category_id: categoryId || undefined }),
+        fetchCatalog({ search: searchParams.get('search') || undefined, category_id: categoryId || undefined, page, limit: 6 }),
         fetchCatalogCategories(),
       ]);
       setCourses(courseResponse.data.courses || []);
+      setPagination(courseResponse.data.pagination || { page, limit: 6, total_items: 0, total_pages: 0 });
       setCategories(categoryResponse.data.categories || []);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Could not load the course catalog.');
     } finally {
       setLoading(false);
     }
-  }, [categoryId, searchParams]);
+  }, [categoryId, page, searchParams]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -40,19 +47,39 @@ export default function CatalogPage() {
     return () => window.removeEventListener('cart:updated', load);
   }, [load]);
   useEffect(() => { setSearch(searchParams.get('search') || ''); }, [searchParams]);
+  useEffect(() => {
+    if (loading || pagination.total_pages <= 0) return;
+    const validPage = clampPage(page, pagination.total_pages);
+    if (validPage === page) return;
+    const next = new URLSearchParams(searchParams);
+    if (validPage === 1) next.delete('page'); else next.set('page', String(validPage));
+    setSearchParams(next, { replace: true });
+  }, [loading, page, pagination.total_pages, searchParams, setSearchParams]);
 
   const applySearch = (event) => {
     event.preventDefault();
     const next = new URLSearchParams(searchParams);
     if (search.trim()) next.set('search', search.trim()); else next.delete('search');
+    next.delete('page');
     setSearchParams(next);
   };
 
   const filterCategory = (value) => {
     const next = new URLSearchParams(searchParams);
     if (value) next.set('category_id', value); else next.delete('category_id');
+    next.delete('page');
     setSearchParams(next);
   };
+
+  const changePage = (nextPage) => {
+    if (nextPage < 1 || nextPage > pagination.total_pages || nextPage === page) return;
+    const next = new URLSearchParams(searchParams);
+    if (nextPage === 1) next.delete('page'); else next.set('page', String(nextPage));
+    setSearchParams(next);
+    catalogRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const correctingOutOfRangePage = !loading && pagination.total_pages > 0 && page > pagination.total_pages;
 
   const addToCart = async (courseId) => {
     const token = localStorage.getItem('token');
@@ -96,7 +123,7 @@ export default function CatalogPage() {
         </div>
       </div>
 
-      <div className="my-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div ref={catalogRef} className="my-7 flex scroll-mt-24 flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div><p className="text-sm font-bold uppercase tracking-wider text-primary">Course catalog</p><h2 className="mt-1 text-2xl font-bold text-slate-900">Explore approved courses</h2></div>
         <select value={categoryId} onChange={(event) => filterCategory(event.target.value)} className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none focus:border-primary">
           <option value="">All categories</option>
@@ -104,8 +131,8 @@ export default function CatalogPage() {
         </select>
       </div>
 
-      {loading ? <div className="rounded-2xl bg-white p-14 text-center text-gray-500">Loading approved courses...</div> : courses.length ? (
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">{courses.map((course) => <CourseCard key={course.id} course={course} adding={addingId === course.id} onAddToCart={addToCart} />)}</div>
+      {loading || correctingOutOfRangePage ? <div className="rounded-2xl bg-white p-14 text-center text-gray-500">Loading approved courses...</div> : courses.length ? (
+        <><div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">{courses.map((course) => <CourseCard key={course.id} course={course} adding={addingId === course.id} onAddToCart={addToCart} />)}</div><div className="mt-8"><Pagination page={pagination.page} totalPages={pagination.total_pages} onPageChange={changePage} disabled={loading} ariaLabel="Course catalog pagination" /></div></>
       ) : (
         <div className="rounded-2xl border border-dashed border-primary/25 bg-white p-14 text-center"><BookOpen className="mx-auto text-primary" size={38} /><h3 className="mt-4 text-xl font-bold text-slate-800">No approved courses found</h3><p className="mt-1 text-gray-500">Try another keyword or category.</p></div>
       )}

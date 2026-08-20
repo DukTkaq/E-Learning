@@ -11,6 +11,7 @@ const {
 } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -29,6 +30,7 @@ const parseCategoryId = (value) => {
 };
 
 const listCatalog = async (userId, filters = {}) => {
+  const pagination = parsePagination(filters);
   const categoryId = parseCategoryId(filters.category_id);
   const search = String(filters.search || '').trim();
   const where = { status: 'Approved' };
@@ -41,14 +43,26 @@ const listCatalog = async (userId, filters = {}) => {
     ];
   }
 
-  const courses = await Course.findAll({
+  const { count, rows: courses } = await Course.findAndCountAll({
     where,
     include: COURSE_INCLUDE,
-    order: [['updated_at', 'DESC'], ['created_at', 'DESC']],
+    order: [['updated_at', 'DESC'], ['created_at', 'DESC'], ['id', 'DESC']],
+    limit: pagination.limit,
+    offset: pagination.offset,
+    distinct: true,
+  });
+
+  const metadata = buildPaginationMeta({
+    page: pagination.page,
+    limit: pagination.limit,
+    totalItems: count,
   });
 
   if (!userId) {
-    return courses.map((course) => ({ ...course.toJSON(), in_cart: false, enrolled: false }));
+    return {
+      courses: courses.map((course) => ({ ...course.toJSON(), in_cart: false, enrolled: false })),
+      pagination: metadata,
+    };
   }
 
   const [cart, enrollments] = await Promise.all([
@@ -59,11 +73,14 @@ const listCatalog = async (userId, filters = {}) => {
   const cartCourseIds = new Set((cart?.CartItems || []).map((item) => item.course_id));
   const enrolledCourseIds = new Set(enrollments.map((item) => item.course_id));
 
-  return courses.map((course) => ({
-    ...course.toJSON(),
-    in_cart: cartCourseIds.has(course.id),
-    enrolled: enrolledCourseIds.has(course.id),
-  }));
+  return {
+    courses: courses.map((course) => ({
+      ...course.toJSON(),
+      in_cart: cartCourseIds.has(course.id),
+      enrolled: enrolledCourseIds.has(course.id),
+    })),
+    pagination: metadata,
+  };
 };
 
 const listMyCourses = async (userId) => {
@@ -82,8 +99,8 @@ const listMyCourses = async (userId) => {
 };
 
 exports.list = asyncHandler(async (req, res) => {
-  const courses = await listCatalog(String(req.user?.role || '').toLowerCase() === 'student' ? req.user.id : null, req.query);
-  res.json({ courses });
+  const result = await listCatalog(String(req.user?.role || '').toLowerCase() === 'student' ? req.user.id : null, req.query);
+  res.json(result);
 });
 
 exports.mine = asyncHandler(async (req, res) => {

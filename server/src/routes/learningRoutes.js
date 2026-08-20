@@ -10,5 +10,6 @@ router.get('/lessons/:lessonId', controller.lessonDetail);
 router.post('/lessons/:lessonId/complete', controller.completeLesson);
 router.get('/lessons/:lessonId/quiz', controller.getQuiz);
 router.post('/quizzes/:quizId/attempts', controller.submitQuiz);
+router.get('/certificates/:certificateId/download', controller.downloadCertificate);
 
 module.exports = router;
