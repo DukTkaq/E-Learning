@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Edit3, LoaderCircle, Plus, RefreshCw, Save, Trash2, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Edit3, LoaderCircle, LockKeyhole, Plus, RefreshCw, Save, Trash2, HelpCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import QuestionFormModal from '../../components/lessons/QuestionFormModal';
 import { fetchQuiz, createQuiz, updateQuiz, deleteQuiz, addQuestion, updateQuestion, deleteQuestion } from '../../features/lessons/lessonApi';
 import { fetchInstructorCourse } from '../../features/courses/courseApi';
+import { canEditCourse, getCourseReadOnlyNotice } from '../../features/courses/courseStatus';
 
 export default function QuizManagementPage() {
   const { courseId, lessonId } = useParams();
@@ -50,6 +51,9 @@ export default function QuizManagementPage() {
   }, [courseId, lessonId]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const readOnly = Boolean(course && !canEditCourse(course.status));
+  const readOnlyNotice = getCourseReadOnlyNotice(course?.status);
 
   const createNewQuiz = async () => {
     if (!quizTitle.trim()) {
@@ -174,12 +178,19 @@ export default function QuizManagementPage() {
         <h1 className="text-3xl font-bold text-slate-900">{course?.title || 'Loading...'}</h1>
       </div>
 
+      {readOnly && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+          <LockKeyhole className="mt-0.5 shrink-0" size={18} />
+          <p className="text-sm"><span className="font-bold">{readOnlyNotice?.title}</span> {readOnlyNotice?.text}</p>
+        </div>
+      )}
+
       {/* Quiz Settings Card */}
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Quiz Settings</h2>
           <div className="flex gap-2">
-            {quiz && (
+            {quiz && !readOnly && (
               <button type="button" onClick={removeQuiz} className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 font-semibold text-red-600 shadow-sm transition hover:bg-red-50">
                 <Trash2 size={16} /> Delete quiz
               </button>
@@ -194,7 +205,7 @@ export default function QuizManagementPage() {
           <div className="rounded-xl border border-dashed border-primary/25 bg-primary/5 p-6 text-center">
             <HelpCircle className="mx-auto mb-2 text-primary" size={32} />
             <p className="font-semibold text-slate-800">No quiz for this lesson yet</p>
-            <p className="mt-1 text-sm text-gray-500">Configure the settings below and click "Create quiz" to get started.</p>
+            <p className="mt-1 text-sm text-gray-500">{readOnly ? 'No quiz was added before this course was submitted.' : 'Configure the settings below and click "Create quiz" to get started.'}</p>
           </div>
         )}
 
@@ -204,6 +215,7 @@ export default function QuizManagementPage() {
             <input
               value={quizTitle}
               onChange={(e) => { setQuizTitle(e.target.value); setDirty(true); }}
+              disabled={readOnly}
               className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
               placeholder="e.g. Chapter 1 Quiz"
             />
@@ -216,7 +228,8 @@ export default function QuizManagementPage() {
               min={1}
               max={100}
               value={passingScore}
-              onChange={(e) => { setPassingScore(parseInt(e.target.value, 10) || 40); setDirty(true); }}
+              onChange={(e) => { setPassingScore(parseInt(e.target.value, 10) || 70); setDirty(true); }}
+              disabled={readOnly}
               className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
             />
           </label>
@@ -229,13 +242,14 @@ export default function QuizManagementPage() {
               max={100}
               value={maxAttempts}
               onChange={(e) => { setMaxAttempts(parseInt(e.target.value, 10) || 1); setDirty(true); }}
+              disabled={readOnly}
               className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
             />
           </label>
         </div>
 
         <div className="mt-4 flex justify-end">
-          {!quiz ? (
+          {!readOnly && (!quiz ? (
             <button type="button" onClick={createNewQuiz} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
               {submitting && <LoaderCircle className="animate-spin" size={18} />}
               Create quiz
@@ -245,7 +259,7 @@ export default function QuizManagementPage() {
               {submitting && <LoaderCircle className="animate-spin" size={18} />}
               <Save size={16} /> Save changes
             </button>
-          )}
+          ))}
         </div>
       </div>
 
@@ -254,9 +268,11 @@ export default function QuizManagementPage() {
         <div className="mt-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
             <h3 className="text-lg font-bold text-slate-900">Questions ({questions.length})</h3>
-            <button type="button" onClick={openAddQuestion} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90">
-              <Plus size={16} /> Add question
-            </button>
+            {!readOnly && (
+              <button type="button" onClick={openAddQuestion} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90">
+                <Plus size={16} /> Add question
+              </button>
+            )}
           </div>
 
           {!questions.length ? (
@@ -295,14 +311,18 @@ export default function QuizManagementPage() {
                         <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-green-100 text-xs font-bold text-green-700">{q.correct_answer}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end gap-1">
-                          <button type="button" onClick={() => openEditQuestion(q)} className="rounded-lg p-2 text-gray-400 hover:bg-primary/10 hover:text-primary" title="Edit">
-                            <Edit3 size={16} />
-                          </button>
-                          <button type="button" onClick={() => removeQuestion(q)} className="rounded-lg p-2 text-gray-400 hover:bg-error/10 hover:text-error" title="Delete">
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
+                        {readOnly ? (
+                          <span className="block text-right text-xs font-semibold text-gray-400">Read only</span>
+                        ) : (
+                          <div className="flex justify-end gap-1">
+                            <button type="button" onClick={() => openEditQuestion(q)} className="rounded-lg p-2 text-gray-400 hover:bg-primary/10 hover:text-primary" title="Edit">
+                              <Edit3 size={16} />
+                            </button>
+                            <button type="button" onClick={() => removeQuestion(q)} className="rounded-lg p-2 text-gray-400 hover:bg-error/10 hover:text-error" title="Delete">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -313,7 +333,7 @@ export default function QuizManagementPage() {
         </div>
       )}
 
-      {questionModalOpen && (
+      {questionModalOpen && !readOnly && (
         <QuestionFormModal question={editingQuestion} submitting={submitting} onClose={() => setQuestionModalOpen(false)} onSubmit={submitQuestion} />
       )}
     </section>

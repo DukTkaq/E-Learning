@@ -116,7 +116,8 @@ const login = async (req, res) => {
         email: user.email,
         role_id: user.role_id,
         role: user.Role ? user.Role.role_name : null,
-        avatar_url: user.avatar_url
+        avatar_url: user.avatar_url,
+        status: user.status
       }
     });
   } catch (error) {
@@ -171,7 +172,8 @@ const updateProfile = async (req, res) => {
         email: user.email,
         role_id: user.role_id,
         role: user.Role ? user.Role.role_name : null,
-        avatar_url: user.avatar_url
+        avatar_url: user.avatar_url,
+        status: user.status
       }
     });
   } catch (error) {
@@ -330,6 +332,8 @@ const resetPassword = async (req, res) => {
 const applyInstructor = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { expertise, bio, portfolio_url } = req.body;
+    
     const user = await User.findByPk(userId);
 
     if (!user) {
@@ -340,14 +344,22 @@ const applyInstructor = async (req, res) => {
       return res.status(400).json({ message: 'Your application is already pending approval.' });
     }
 
-    // Role ID 2 is usually Student, Role ID 3 is Instructor.
-    // If they are already instructor or admin, we shouldn't let them apply.
-    // But verifying their current role is easier using req.user.role
+    if (user.status === 'Rejected') {
+      return res.status(403).json({ message: 'Your previous application was rejected. You cannot apply again.' });
+    }
+
+    if (!expertise || !bio) {
+      return res.status(400).json({ message: 'Expertise and bio are required to apply.' });
+    }
+
     if (req.user.role === 'Instructor' || req.user.role === 'Admin') {
       return res.status(400).json({ message: 'You are already an Instructor or Admin.' });
     }
 
     user.status = 'Pending';
+    user.expertise = expertise;
+    user.bio = bio;
+    user.portfolio_url = portfolio_url || null;
     await user.save();
 
     res.json({

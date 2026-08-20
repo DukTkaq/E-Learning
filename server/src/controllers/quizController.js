@@ -1,12 +1,16 @@
 const { Quiz, Question, Lesson, Course } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { canEditCourse, getCourseEditMessage } = require('../rules/courseStatusRules');
 
 const VALID_ANSWERS = ['A', 'B', 'C', 'D'];
 
-const findOwnedLesson = async (courseId, lessonId, instructorId) => {
+const findOwnedLesson = async (courseId, lessonId, instructorId, requireEditable = false) => {
   const course = await Course.findOne({ where: { id: courseId, instructor_id: instructorId } });
   if (!course) throw new AppError(404, 'Course not found.');
+  if (requireEditable && !canEditCourse(course.status)) {
+    throw new AppError(409, getCourseEditMessage(course.status));
+  }
   const lesson = await Lesson.findOne({ where: { id: lessonId, course_id: courseId } });
   if (!lesson) throw new AppError(404, 'Lesson not found.');
   return lesson;
@@ -25,7 +29,7 @@ exports.getQuiz = asyncHandler(async (req, res) => {
 
 exports.createQuiz = asyncHandler(async (req, res) => {
   const { courseId, lessonId } = req.params;
-  await findOwnedLesson(courseId, lessonId, req.user.id);
+  await findOwnedLesson(courseId, lessonId, req.user.id, true);
 
   const existing = await Quiz.findOne({ where: { lesson_id: lessonId } });
   if (existing) throw new AppError(409, 'This lesson already has a quiz.');
@@ -53,7 +57,7 @@ exports.createQuiz = asyncHandler(async (req, res) => {
 
 exports.updateQuiz = asyncHandler(async (req, res) => {
   const { courseId, lessonId } = req.params;
-  await findOwnedLesson(courseId, lessonId, req.user.id);
+  await findOwnedLesson(courseId, lessonId, req.user.id, true);
 
   const quiz = await Quiz.findOne({ where: { lesson_id: lessonId } });
   if (!quiz) throw new AppError(404, 'Quiz not found.');
@@ -84,7 +88,7 @@ exports.updateQuiz = asyncHandler(async (req, res) => {
 
 exports.deleteQuiz = asyncHandler(async (req, res) => {
   const { courseId, lessonId } = req.params;
-  await findOwnedLesson(courseId, lessonId, req.user.id);
+  await findOwnedLesson(courseId, lessonId, req.user.id, true);
 
   const quiz = await Quiz.findOne({ where: { lesson_id: lessonId } });
   if (!quiz) throw new AppError(404, 'Quiz not found.');
@@ -97,7 +101,7 @@ exports.deleteQuiz = asyncHandler(async (req, res) => {
 
 exports.addQuestion = asyncHandler(async (req, res) => {
   const { courseId, lessonId } = req.params;
-  await findOwnedLesson(courseId, lessonId, req.user.id);
+  await findOwnedLesson(courseId, lessonId, req.user.id, true);
 
   const quiz = await Quiz.findOne({ where: { lesson_id: lessonId } });
   if (!quiz) throw new AppError(404, 'Quiz not found.');
@@ -129,7 +133,7 @@ exports.addQuestion = asyncHandler(async (req, res) => {
 
 exports.updateQuestion = asyncHandler(async (req, res) => {
   const { courseId, lessonId, questionId } = req.params;
-  await findOwnedLesson(courseId, lessonId, req.user.id);
+  await findOwnedLesson(courseId, lessonId, req.user.id, true);
 
   const quiz = await Quiz.findOne({ where: { lesson_id: lessonId } });
   if (!quiz) throw new AppError(404, 'Quiz not found.');
@@ -173,7 +177,7 @@ exports.updateQuestion = asyncHandler(async (req, res) => {
 
 exports.deleteQuestion = asyncHandler(async (req, res) => {
   const { courseId, lessonId, questionId } = req.params;
-  await findOwnedLesson(courseId, lessonId, req.user.id);
+  await findOwnedLesson(courseId, lessonId, req.user.id, true);
 
   const quiz = await Quiz.findOne({ where: { lesson_id: lessonId } });
   if (!quiz) throw new AppError(404, 'Quiz not found.');

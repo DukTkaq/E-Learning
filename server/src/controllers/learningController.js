@@ -202,8 +202,10 @@ const loadEnrollment = async (userId, courseId, transaction) => {
     ...(transaction ? { lock: transaction.LOCK.UPDATE } : {}),
   });
   if (!enrollment) throw new AppError(403, 'You must be enrolled in this course.');
-  const course = await Course.findOne({ where: { id: courseId, status: 'Approved' }, transaction });
-  if (!course) throw new AppError(409, 'This course is not available for learning.');
+  const course = await Course.findByPk(courseId, { transaction });
+  if (!course || !canEnrolledStudentLearn(course.status)) {
+    throw new AppError(409, 'This course is not available for learning.');
+  }
   return { course, enrollment };
 };
 

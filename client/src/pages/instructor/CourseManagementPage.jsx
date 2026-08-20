@@ -5,7 +5,8 @@ import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import CourseFormModal from '../../components/courses/CourseFormModal';
 import CourseTable from '../../components/courses/CourseTable';
-import { createCourse, fetchCategories, fetchInstructorCourses, hideCourse, updateCourse } from '../../features/courses/courseApi';
+import CourseWorkflowHint from '../../components/courses/CourseWorkflowHint';
+import { createCourse, fetchCategories, fetchInstructorCourses, hideCourse, submitCourseForApproval, updateCourse } from '../../features/courses/courseApi';
 
 export default function CourseManagementPage() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export default function CourseManagementPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submittingCourseId, setSubmittingCourseId] = useState(null);
   const [editingCourse, setEditingCourse] = useState(undefined);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -44,7 +46,7 @@ export default function CourseManagementPage() {
         toast.success('Course updated successfully.');
       } else {
         await createCourse(payload);
-        toast.success('Course submitted for approval.');
+        toast.success('Course draft created. Add lessons and quizzes before submitting it.');
       }
       setModalOpen(false);
       await loadData();
@@ -52,6 +54,35 @@ export default function CourseManagementPage() {
       toast.error(error.response?.data?.message || 'Could not save the course.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const submitForApproval = async (course) => {
+    const result = await Swal.fire({
+      title: 'Submit this course?',
+      text: 'Required: description, thumbnail, at least 3 lessons, exactly one final lesson, one quiz per lesson, and at least 3 questions per quiz.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Submit for approval',
+      confirmButtonColor: '#4f46e5',
+    });
+    if (!result.isConfirmed) return;
+
+    setSubmittingCourseId(course.id);
+    try {
+      await submitCourseForApproval(course.id);
+      toast.success('Course submitted for approval.');
+      await loadData();
+    } catch (error) {
+      const message = error.response?.data?.message || 'Could not submit the course.';
+      const details = error.response?.data?.details || [];
+      await Swal.fire({
+        title: 'Course not ready',
+        text: [message, ...details.map((detail) => `• ${detail}`)].join('\n'),
+        icon: 'warning',
+      });
+    } finally {
+      setSubmittingCourseId(null);
     }
   };
 
@@ -90,7 +121,18 @@ export default function CourseManagementPage() {
         </div>
       </div>
 
-      <CourseTable courses={courses} loading={loading} onView={openDetail} onEdit={openEdit} onHide={hide} onViewLessons={openLessons} />
+      <CourseWorkflowHint />
+
+      <CourseTable
+        courses={courses}
+        loading={loading}
+        submittingCourseId={submittingCourseId}
+        onView={openDetail}
+        onEdit={openEdit}
+        onHide={hide}
+        onViewLessons={openLessons}
+        onSubmitForApproval={submitForApproval}
+      />
 
       {modalOpen && (
         <CourseFormModal course={editingCourse} categories={categories} submitting={submitting} onClose={() => setModalOpen(false)} onSubmit={submit} />

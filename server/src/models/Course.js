@@ -25,7 +25,11 @@ const Course = sequelize.define('Course', {
   },
   status: {
     type: DataTypes.STRING,
-    defaultValue: 'Pending'
+    allowNull: false,
+    defaultValue: 'Draft',
+    validate: {
+      isIn: [['Draft', 'Pending', 'Approved', 'Rejected', 'Hidden']]
+    }
   },
   instructor_id: {
     type: DataTypes.UUID,

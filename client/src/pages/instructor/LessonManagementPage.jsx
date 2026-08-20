@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Plus, RefreshCw, Video } from 'lucide-react';
+import { ArrowLeft, LockKeyhole, Plus, RefreshCw, Video } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
@@ -7,6 +7,7 @@ import LessonFormModal from '../../components/lessons/LessonFormModal';
 import LessonTable from '../../components/lessons/LessonTable';
 import { fetchLessons, createLesson, updateLesson, deleteLesson, moveLessonUp, moveLessonDown } from '../../features/lessons/lessonApi';
 import { fetchInstructorCourse } from '../../features/courses/courseApi';
+import { canEditCourse, getCourseReadOnlyNotice } from '../../features/courses/courseStatus';
 
 export default function LessonManagementPage() {
   const { courseId } = useParams();
@@ -35,6 +36,9 @@ export default function LessonManagementPage() {
   }, [courseId]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const readOnly = Boolean(course && !canEditCourse(course.status));
+  const readOnlyNotice = getCourseReadOnlyNotice(course?.status);
 
   const openCreate = () => { setEditingLesson(undefined); setModalOpen(true); };
   const openEdit = (lesson) => { setEditingLesson(lesson); setModalOpen(true); };
@@ -113,11 +117,20 @@ export default function LessonManagementPage() {
         </div>
         <div className="flex gap-3">
           <button type="button" onClick={loadData} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 font-semibold text-gray-600 shadow-sm hover:border-primary/30 hover:text-primary"><RefreshCw size={18} /> Refresh</button>
-          <button type="button" onClick={openCreate} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 hover:opacity-90"><Plus size={18} /> Create lesson</button>
+          {!readOnly && (
+            <button type="button" onClick={openCreate} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 hover:opacity-90"><Plus size={18} /> Create lesson</button>
+          )}
         </div>
       </div>
 
-      <LessonTable lessons={lessons} loading={loading} onEdit={openEdit} onDelete={remove} onMoveUp={moveUp} onMoveDown={moveDown} onManageQuiz={manageQuiz} />
+      {readOnly && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+          <LockKeyhole className="mt-0.5 shrink-0" size={18} />
+          <p className="text-sm"><span className="font-bold">{readOnlyNotice?.title}</span> {readOnlyNotice?.text}</p>
+        </div>
+      )}
+
+      <LessonTable lessons={lessons} loading={loading} readOnly={readOnly} onEdit={openEdit} onDelete={remove} onMoveUp={moveUp} onMoveDown={moveDown} onManageQuiz={manageQuiz} />
 
       {modalOpen && (
         <LessonFormModal lesson={editingLesson} submitting={submitting} onClose={() => setModalOpen(false)} onSubmit={submit} />

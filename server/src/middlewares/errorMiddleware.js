@@ -23,9 +23,12 @@ const errorHandler = (error, req, res, next) => {
   const statusCode = error.statusCode || 500;
   if (statusCode >= 500) console.error(error);
 
-  return res.status(statusCode).json({
+  const response = {
     message: statusCode >= 500 && !(error instanceof AppError) ? 'Internal server error.' : error.message,
-  });
+  };
+  if (error.details) response.details = error.details;
+
+  return res.status(statusCode).json(response);
 };
 
 module.exports = errorHandler;
