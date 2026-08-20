@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Shield, Camera, Edit2, Save, X, Lock, Eye, EyeOff } from 'lucide-react'
+import { User, Mail, Shield, Camera, Edit2, Save, X, Lock, Eye, EyeOff, Briefcase, Link as LinkIcon, AlignLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../utils/api'
 
@@ -25,6 +25,16 @@ export default function Profile() {
     confirm: false
   })
   const [passwordLoading, setPasswordLoading] = useState(false)
+
+  // Instructor Application State
+  const [isApplyingInstructor, setIsApplyingInstructor] = useState(false)
+  const [instructorForm, setInstructorForm] = useState({
+    expertise: '',
+    bio: '',
+    portfolio_url: '',
+    agreeTerms: false
+  })
+  const [applyLoading, setApplyLoading] = useState(false)
 
   const fileInputRef = useRef(null)
   const navigate = useNavigate()
@@ -134,6 +144,39 @@ export default function Profile() {
     }
     return user.name.charAt(0).toUpperCase()
   }
+
+  const handleApplyInstructor = async (e) => {
+    e.preventDefault();
+    if (!instructorForm.expertise || !instructorForm.bio) {
+      toast.error('Expertise and Bio are required.');
+      return;
+    }
+    if (!instructorForm.agreeTerms) {
+      toast.error('You must agree to the terms to apply.');
+      return;
+    }
+
+    setApplyLoading(true);
+    try {
+      const res = await api.post('/auth/apply-instructor', {
+        expertise: instructorForm.expertise,
+        bio: instructorForm.bio,
+        portfolio_url: instructorForm.portfolio_url
+      });
+      toast.success(res.data.message);
+      const updatedUser = { ...user, status: 'Pending' };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setIsApplyingInstructor(false);
+      window.dispatchEvent(new Event('authChange'));
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to apply.');
+    } finally {
+      setApplyLoading(false);
+    }
+  }
+
+  if (!user) return <div className="p-8 text-center text-gray-500">Loading profile...</div>
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
@@ -246,6 +289,42 @@ export default function Profile() {
               </div>
               <p className="text-xs text-gray-400 mt-1">* Email address cannot be changed</p>
             </div>
+
+            {user.role === 'Instructor' && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <Briefcase className="w-4 h-4" />
+                    Expertise
+                  </label>
+                  <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium">
+                    {user.expertise || 'Not provided'}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <LinkIcon className="w-4 h-4" />
+                    Portfolio URL
+                  </label>
+                  <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium truncate">
+                    {user.portfolio_url ? (
+                      <a href={user.portfolio_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{user.portfolio_url}</a>
+                    ) : 'Not provided'}
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <AlignLeft className="w-4 h-4" />
+                    Bio / Introduction
+                  </label>
+                  <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium whitespace-pre-wrap">
+                    {user.bio || 'Not provided'}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -263,23 +342,12 @@ export default function Profile() {
 
           {(!user.role || user.role === 'Student') && (
             <button
-              onClick={async () => {
-                try {
-                  const api = (await import('../utils/api')).default;
-                  const res = await api.post('/auth/apply-instructor');
-                  toast.success(res.data.message);
-                  const updatedUser = { ...user, status: 'Pending' };
-                  localStorage.setItem('user', JSON.stringify(updatedUser));
-                  window.dispatchEvent(new Event('authChange'));
-                } catch (error) {
-                  toast.error(error.response?.data?.message || 'Failed to apply.');
-                }
-              }}
-              disabled={user.status === 'Pending'}
+              onClick={() => setIsApplyingInstructor(true)}
+              disabled={user.status === 'Pending' || user.status === 'Rejected'}
               className="flex items-center gap-2 px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 rounded-xl transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Shield className="w-4 h-4" />
-              {user.status === 'Pending' ? 'Application Pending Approval' : 'Become an Instructor'}
+              {user.status === 'Pending' ? 'Application Pending Approval' : user.status === 'Rejected' ? 'Application Rejected' : 'Become an Instructor'}
             </button>
           )}
         </div>
@@ -368,6 +436,83 @@ export default function Profile() {
                   className="w-full py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-colors disabled:opacity-50 mt-2"
                 >
                   {passwordLoading ? 'Updating...' : 'Update Password'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {isApplyingInstructor && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+            <div className="w-full max-w-lg bg-white p-7 rounded-2xl border border-gray-200 shadow-2xl relative my-8">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <Shield className="w-6 h-6 text-primary" />
+                  Become an Instructor
+                </h3>
+                <button 
+                  onClick={() => setIsApplyingInstructor(false)}
+                  className="p-1 hover:bg-gray-200 rounded-lg transition-colors text-gray-500"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleApplyInstructor} className="space-y-5">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-600">Expertise Field <span className="text-error">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. IT, Languages, Business..."
+                    value={instructorForm.expertise}
+                    onChange={(e) => setInstructorForm({...instructorForm, expertise: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl outline-none transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-600">Bio / Teaching Experience <span className="text-error">*</span></label>
+                  <textarea
+                    required
+                    rows="4"
+                    placeholder="Tell us about your teaching experience and why you want to become an instructor..."
+                    value={instructorForm.bio}
+                    onChange={(e) => setInstructorForm({...instructorForm, bio: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl outline-none transition-all resize-none"
+                  ></textarea>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-600">CV / LinkedIn URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://linkedin.com/in/yourprofile"
+                    value={instructorForm.portfolio_url}
+                    onChange={(e) => setInstructorForm({...instructorForm, portfolio_url: e.target.value})}
+                    className="w-full px-4 py-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl outline-none transition-all"
+                  />
+                </div>
+
+                <div className="flex items-start gap-3 pt-2">
+                  <input
+                    type="checkbox"
+                    id="agreeTerms"
+                    checked={instructorForm.agreeTerms}
+                    onChange={(e) => setInstructorForm({...instructorForm, agreeTerms: e.target.checked})}
+                    className="mt-1 w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary"
+                  />
+                  <label htmlFor="agreeTerms" className="text-sm text-gray-600 cursor-pointer">
+                    I agree to the Instructor Terms and Conditions, and confirm that the information provided is accurate.
+                  </label>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={applyLoading || !instructorForm.agreeTerms}
+                  className="w-full py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-colors disabled:opacity-50 mt-4"
+                >
+                  {applyLoading ? 'Submitting...' : 'Submit Application'}
                 </button>
               </form>
             </div>

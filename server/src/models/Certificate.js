@@ -33,7 +33,12 @@ const Certificate = sequelize.define('Certificate', {
   }
 }, {
   tableName: 'certificates',
-  timestamps: false
+  timestamps: false,
+  indexes: [{
+    name: 'certificates_user_course_unique',
+    unique: true,
+    fields: ['user_id', 'course_id']
+  }]
 });
 
 module.exports = Certificate;

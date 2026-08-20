@@ -19,7 +19,7 @@ export default function QuizManagementPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [quizTitle, setQuizTitle] = useState('');
-  const [passingScore, setPassingScore] = useState(70);
+  const [passingScore, setPassingScore] = useState(40);
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [dirty, setDirty] = useState(false);
 
