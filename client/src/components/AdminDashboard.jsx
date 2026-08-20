@@ -51,7 +51,7 @@ const AdminDashboard = () => {
     { title: 'Total Users', value: metrics.totalUsers, icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
     { title: 'Total Instructors', value: metrics.totalInstructors, icon: GraduationCap, color: 'text-secondary', bg: 'bg-secondary/10' },
     { title: 'Published Courses', value: metrics.totalCourses, icon: BookOpen, color: 'text-accent', bg: 'bg-accent/10' },
-    { title: 'Total Revenue', value: `$${metrics.totalRevenue.toLocaleString()}`, icon: DollarSign, color: 'text-success', bg: 'bg-success/10' },
+    { title: 'Total Revenue', value: metrics.totalRevenue.toLocaleString('vi-VN') + 'K ₫', icon: DollarSign, color: 'text-success', bg: 'bg-success/10' },
   ];
 
   return (
@@ -133,9 +133,10 @@ const AdminDashboard = () => {
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fontSize: 12, fill: '#64748b' }}
-                    tickFormatter={(value) => `$${value}`}
+                    tickFormatter={(value) => value.toLocaleString('vi-VN') + 'K ₫'}
                   />
                   <Tooltip 
+                    formatter={(value) => value.toLocaleString('vi-VN') + 'K ₫'}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                   />
                   <Area 
