@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { UserCheck, RefreshCw } from 'lucide-react';
+import { UserCheck, RefreshCw, Eye, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import { fetchInstructorRequests, approveInstructor, rejectInstructor } from '../../features/admin/adminApi';
@@ -8,6 +8,7 @@ export default function InstructorApprovalsPage() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reviewingId, setReviewingId] = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -24,6 +25,7 @@ export default function InstructorApprovalsPage() {
   useEffect(() => { load(); }, [load]);
 
   const handleReview = async (user, action) => {
+    if (selectedRequest) setSelectedRequest(null);
     const isApprove = action === 'approve';
     const result = await Swal.fire({
       title: `${isApprove ? 'Approve' : 'Reject'} this request?`,
@@ -110,18 +112,10 @@ export default function InstructorApprovalsPage() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => handleReview(user, 'reject')}
-                        disabled={reviewingId === user.id}
-                        className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        onClick={() => setSelectedRequest(user)}
+                        className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-gray-100"
                       >
-                        Reject
-                      </button>
-                      <button
-                        onClick={() => handleReview(user, 'approve')}
-                        disabled={reviewingId === user.id}
-                        className="rounded-lg bg-green-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-50"
-                      >
-                        {reviewingId === user.id ? 'Processing...' : 'Approve'}
+                        <Eye size={16} /> Details
                       </button>
                     </div>
                   </td>
@@ -135,6 +129,85 @@ export default function InstructorApprovalsPage() {
           <UserCheck className="mx-auto text-primary" size={38} />
           <h2 className="mt-4 text-xl font-bold text-slate-800">No pending requests</h2>
           <p className="mt-1 text-gray-500">There are no students waiting to become instructors.</p>
+        </div>
+      )}
+
+      {selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-2xl bg-white p-7 rounded-2xl border border-gray-200 shadow-2xl relative my-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <UserCheck className="w-6 h-6 text-primary" />
+                Application Details
+              </h3>
+              <button 
+                onClick={() => setSelectedRequest(null)}
+                className="p-1 hover:bg-gray-200 rounded-lg transition-colors text-gray-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center gap-4 border-b border-gray-100 pb-4">
+                <div className="h-16 w-16 overflow-hidden rounded-full bg-gray-100">
+                  {selectedRequest.avatar_url ? (
+                    <img src={selectedRequest.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xl font-bold text-gray-400">
+                      {selectedRequest.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-slate-800">{selectedRequest.name}</h4>
+                  <p className="text-sm text-gray-500">{selectedRequest.email}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="col-span-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Expertise Field</label>
+                  <p className="mt-1 font-medium text-slate-800 bg-gray-50 p-3 rounded-xl border border-gray-100">{selectedRequest.expertise || 'Not provided'}</p>
+                </div>
+                
+                <div className="col-span-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Bio & Experience</label>
+                  <div className="mt-1 font-medium text-slate-800 bg-gray-50 p-3 rounded-xl border border-gray-100 whitespace-pre-wrap min-h-[100px]">
+                    {selectedRequest.bio || 'Not provided'}
+                  </div>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Portfolio / CV Link</label>
+                  {selectedRequest.portfolio_url ? (
+                    <a href={selectedRequest.portfolio_url} target="_blank" rel="noopener noreferrer" className="mt-1 block font-medium text-primary hover:underline bg-primary/5 p-3 rounded-xl border border-primary/10 truncate">
+                      {selectedRequest.portfolio_url}
+                    </a>
+                  ) : (
+                    <p className="mt-1 font-medium text-gray-500 bg-gray-50 p-3 rounded-xl border border-gray-100">Not provided</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 mt-6">
+                <button
+                  onClick={() => handleReview(selectedRequest, 'reject')}
+                  disabled={reviewingId === selectedRequest.id}
+                  className="rounded-xl border border-red-200 px-5 py-2.5 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                >
+                  Reject Application
+                </button>
+                <button
+                  onClick={() => handleReview(selectedRequest, 'approve')}
+                  disabled={reviewingId === selectedRequest.id}
+                  className="rounded-xl bg-green-500 px-5 py-2.5 font-semibold text-white hover:bg-green-600 disabled:opacity-50 transition-colors"
+                >
+                  {reviewingId === selectedRequest.id ? 'Processing...' : 'Approve Application'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </section>
