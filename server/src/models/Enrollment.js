@@ -11,6 +11,11 @@ const Enrollment = sequelize.define('Enrollment', {
     type: DataTypes.INTEGER,
     defaultValue: 0
   },
+  learning_state: {
+    type: DataTypes.JSONB,
+    allowNull: false,
+    defaultValue: { lessons: {} }
+  },
   user_id: {
     type: DataTypes.UUID,
     allowNull: false
