@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
-const { Course, Category } = require('../models');
+const { Course, Category, Lesson, Quiz, Question } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { canEditCourse, getCourseEditMessage } = require('../rules/courseStatusRules');
@@ -8,6 +8,27 @@ const { canEditCourse, getCourseEditMessage } = require('../rules/courseStatusRu
 const BUCKET_NAME = 'course-thumbnails';
 const PUBLIC_OBJECT_MARKER = `/storage/v1/object/public/${BUCKET_NAME}/`;
 const COURSE_INCLUDE = [{ model: Category, attributes: ['id', 'name'] }];
+const COURSE_DETAIL_INCLUDE = [
+  ...COURSE_INCLUDE,
+  {
+    model: Lesson,
+    attributes: ['id', 'title', 'video_url', 'order_index', 'is_final', 'created_at', 'updated_at'],
+    required: false,
+    include: [{
+      model: Quiz,
+      attributes: ['id', 'title', 'passing_score', 'max_attempts', 'created_at', 'updated_at'],
+      required: false,
+      include: [{
+        model: Question,
+        attributes: [
+          'id', 'content', 'option_a', 'option_b', 'option_c', 'option_d',
+          'correct_answer', 'created_at', 'updated_at',
+        ],
+        required: false,
+      }],
+    }],
+  },
+];
 const EDITABLE_FIELDS = ['title', 'description', 'thumbnail', 'price', 'category_id'];
 const EXTENSION_BY_MIME_TYPE = {
   'image/jpeg': '.jpg',
@@ -138,10 +159,16 @@ const validateCoursePayload = async (payload, { partial = false } = {}) => {
   return data;
 };
 
-const findOwnedCourse = async (courseId, instructorId) => {
+const findOwnedCourse = async (courseId, instructorId, { withCurriculum = false } = {}) => {
   const course = await Course.findOne({
     where: { id: courseId, instructor_id: instructorId },
-    include: COURSE_INCLUDE,
+    include: withCurriculum ? COURSE_DETAIL_INCLUDE : COURSE_INCLUDE,
+    ...(withCurriculum ? {
+      order: [
+        [Lesson, 'order_index', 'ASC'],
+        [Lesson, Quiz, Question, 'created_at', 'ASC'],
+      ],
+    } : {}),
   });
   if (!course) throw new AppError(404, 'Course not found.');
   return course;
@@ -184,7 +211,7 @@ exports.list = asyncHandler(async (req, res) => {
 });
 
 exports.get = asyncHandler(async (req, res) => {
-  const course = await findOwnedCourse(req.params.id, req.user.id);
+  const course = await findOwnedCourse(req.params.id, req.user.id, { withCurriculum: true });
   res.json({ course });
 });
 
