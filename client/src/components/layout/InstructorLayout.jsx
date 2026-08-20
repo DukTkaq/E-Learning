@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, BookOpen, Home, LogOut, Menu, MessageSquare, X, Ticket } from 'lucide-react';
+import { BarChart3, BookOpen, Home, LogOut, Menu, MessageSquare, X, Ticket, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const NAV_ITEMS = [
@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { label: 'Vouchers', path: '/instructor/vouchers', icon: Ticket },
   { label: 'Revenue', path: '/instructor/revenue', icon: BarChart3 },
   { label: 'Reviews', path: '/instructor/reviews', icon: MessageSquare },
+  { label: 'My Profile', path: '/instructor/profile', icon: User },
 ];
 
 export default function InstructorLayout({ children }) {
@@ -57,7 +58,7 @@ export default function InstructorLayout({ children }) {
         <div className="border-t border-slate-800 p-4">
           {expanded && (
             <div className="mb-3 px-3">
-              <p className="truncate text-sm font-semibold">{user.name || 'Instructor'}</p>
+              <p className="truncate text-sm font-semibold">{user?.name || 'Instructor'}</p>
               <p className="text-xs text-slate-400">Instructor</p>
             </div>
           )}
@@ -74,9 +75,9 @@ export default function InstructorLayout({ children }) {
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">E-Learning</p>
             <p className="text-sm text-gray-500">Build, publish and grow your courses</p>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary font-bold text-white">
-            {(user.name || 'I').charAt(0).toUpperCase()}
-          </div>
+          <Link to="/instructor/profile" className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary font-bold text-white hover:opacity-80 transition-opacity" title="My Profile">
+            {(user?.name || 'I').charAt(0).toUpperCase()}
+          </Link>
         </header>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="mx-auto max-w-7xl">{children}</div>

@@ -130,6 +130,7 @@ function App() {
           <Route path="/instructor/vouchers" element={<InstructorLayout><VoucherManagementPage /></InstructorLayout>} />
           <Route path="/instructor/revenue" element={<InstructorLayout><RevenueDashboardPage /></InstructorLayout>} />
           <Route path="/instructor/reviews" element={<InstructorLayout><ReviewsPage /></InstructorLayout>} />
+          <Route path="/instructor/profile" element={<InstructorLayout><Profile /></InstructorLayout>} />
         </Route>
 
         {/* Student Commerce Routes */}
