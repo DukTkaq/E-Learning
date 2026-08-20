@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Edit3, Trash2, Trophy, Video, HelpCircle } from 'lucide-react';
 
-export default function LessonTable({ lessons, loading, onEdit, onDelete, onMoveUp, onMoveDown, onManageQuiz }) {
+export default function LessonTable({ lessons, loading, readOnly = false, onEdit, onDelete, onMoveUp, onMoveDown, onManageQuiz }) {
   if (loading) {
     return <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center text-gray-500 shadow-sm">Loading lessons...</div>;
   }
@@ -58,7 +58,7 @@ export default function LessonTable({ lessons, loading, onEdit, onDelete, onMove
                       onClick={() => onManageQuiz(lesson)}
                       className="inline-flex items-center gap-1 rounded-full border border-dashed border-primary/30 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/10"
                     >
-                      + Add quiz
+                      {readOnly ? 'No quiz' : '+ Add quiz'}
                     </button>
                   )}
                 </td>
@@ -73,22 +73,26 @@ export default function LessonTable({ lessons, loading, onEdit, onDelete, onMove
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex justify-end gap-1">
-                    {!lesson.is_final && (
+                    {!readOnly && !lesson.is_final && (
                       <>
                         <button type="button" onClick={() => onMoveUp(lesson)} disabled={index === 0} className="rounded-lg p-2 text-gray-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30" title="Move up">
                           <ArrowUp size={16} />
                         </button>
-                        <button type="button" onClick={() => onMoveDown(lesson)} disabled={index === lessons.length - 2} className="rounded-lg p-2 text-gray-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30" title="Move down">
+                        <button type="button" onClick={() => onMoveDown(lesson)} disabled={index === lessons.length - 1 || lessons[index + 1]?.is_final} className="rounded-lg p-2 text-gray-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30" title="Move down">
                           <ArrowDown size={16} />
                         </button>
                       </>
                     )}
-                    <button type="button" onClick={() => onEdit(lesson)} className="rounded-lg p-2 text-gray-400 hover:bg-primary/10 hover:text-primary" title="Edit">
-                      <Edit3 size={16} />
-                    </button>
-                    <button type="button" onClick={() => onDelete(lesson)} className="rounded-lg p-2 text-gray-400 hover:bg-error/10 hover:text-error" title="Delete">
-                      <Trash2 size={16} />
-                    </button>
+                    {!readOnly && (
+                      <>
+                        <button type="button" onClick={() => onEdit(lesson)} className="rounded-lg p-2 text-gray-400 hover:bg-primary/10 hover:text-primary" title="Edit">
+                          <Edit3 size={16} />
+                        </button>
+                        <button type="button" onClick={() => onDelete(lesson)} className="rounded-lg p-2 text-gray-400 hover:bg-error/10 hover:text-error" title="Delete">
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>

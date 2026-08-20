@@ -1,12 +1,16 @@
 const { Lesson, Course, Quiz } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { canEditCourse, getCourseEditMessage } = require('../rules/courseStatusRules');
 const fs = require('fs');
 const path = require('path');
 
-const findOwnedCourse = async (courseId, instructorId) => {
+const findOwnedCourse = async (courseId, instructorId, requireEditable = false) => {
   const course = await Course.findOne({ where: { id: courseId, instructor_id: instructorId } });
   if (!course) throw new AppError(404, 'Course not found.');
+  if (requireEditable && !canEditCourse(course.status)) {
+    throw new AppError(409, getCourseEditMessage(course.status));
+  }
   return course;
 };
 
@@ -25,7 +29,7 @@ exports.list = asyncHandler(async (req, res) => {
 });
 
 exports.create = asyncHandler(async (req, res) => {
-  await findOwnedCourse(req.params.courseId, req.user.id);
+  await findOwnedCourse(req.params.courseId, req.user.id, true);
 
   const { title, is_final } = req.body;
   if (!title || !title.trim()) throw new AppError(400, 'Lesson title is required.');
@@ -60,7 +64,7 @@ exports.create = asyncHandler(async (req, res) => {
 });
 
 exports.update = asyncHandler(async (req, res) => {
-  await findOwnedCourse(req.params.courseId, req.user.id);
+  await findOwnedCourse(req.params.courseId, req.user.id, true);
 
   const lesson = await Lesson.findOne({ where: { id: req.params.id, course_id: req.params.courseId } });
   if (!lesson) throw new AppError(404, 'Lesson not found.');
@@ -102,7 +106,7 @@ exports.update = asyncHandler(async (req, res) => {
 });
 
 exports.remove = asyncHandler(async (req, res) => {
-  await findOwnedCourse(req.params.courseId, req.user.id);
+  await findOwnedCourse(req.params.courseId, req.user.id, true);
 
   const lesson = await Lesson.findOne({ where: { id: req.params.id, course_id: req.params.courseId } });
   if (!lesson) throw new AppError(404, 'Lesson not found.');
@@ -129,7 +133,7 @@ exports.remove = asyncHandler(async (req, res) => {
 });
 
 exports.moveUp = asyncHandler(async (req, res) => {
-  await findOwnedCourse(req.params.courseId, req.user.id);
+  await findOwnedCourse(req.params.courseId, req.user.id, true);
 
   const lesson = await Lesson.findOne({ where: { id: req.params.id, course_id: req.params.courseId } });
   if (!lesson) throw new AppError(404, 'Lesson not found.');
@@ -152,7 +156,7 @@ exports.moveUp = asyncHandler(async (req, res) => {
 });
 
 exports.moveDown = asyncHandler(async (req, res) => {
-  await findOwnedCourse(req.params.courseId, req.user.id);
+  await findOwnedCourse(req.params.courseId, req.user.id, true);
 
   const lesson = await Lesson.findOne({ where: { id: req.params.id, course_id: req.params.courseId } });
   if (!lesson) throw new AppError(404, 'Lesson not found.');

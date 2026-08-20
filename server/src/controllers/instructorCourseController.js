@@ -3,6 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { Course, Category } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { canEditCourse, getCourseEditMessage } = require('../rules/courseStatusRules');
 
 const BUCKET_NAME = 'course-thumbnails';
 const PUBLIC_OBJECT_MARKER = `/storage/v1/object/public/${BUCKET_NAME}/`;
@@ -152,7 +153,7 @@ const createOwnedCourse = async (instructorId, payload) => {
   const course = await Course.create({
     ...data,
     instructor_id: instructorId,
-    status: 'Pending',
+    status: 'Draft',
     created_at: now,
     updated_at: now,
   });
@@ -161,14 +162,13 @@ const createOwnedCourse = async (instructorId, payload) => {
 
 const updateOwnedCourse = async (courseId, instructorId, payload) => {
   const course = await findOwnedCourse(courseId, instructorId);
-  if (course.status === 'Hidden') {
-    throw new AppError(409, 'A hidden course cannot be edited.');
+  if (!canEditCourse(course.status)) {
+    throw new AppError(409, getCourseEditMessage(course.status));
   }
 
   const data = await validateCoursePayload(payload, { partial: true });
   await course.update({
     ...data,
-    status: ['Approved', 'Rejected'].includes(course.status) ? 'Pending' : course.status,
     updated_at: new Date(),
   });
   return findOwnedCourse(courseId, instructorId);
@@ -195,7 +195,7 @@ exports.create = asyncHandler(async (req, res) => {
       ...req.body,
       ...(uploadedThumbnail ? { thumbnail: uploadedThumbnail.publicUrl } : {}),
     });
-    res.status(201).json({ message: 'Course submitted for approval.', course });
+    res.status(201).json({ message: 'Course draft created.', course });
   } catch (error) {
     if (uploadedThumbnail) {
       removeThumbnail(uploadedThumbnail.objectPath).catch((cleanupError) => {
@@ -235,6 +235,9 @@ exports.update = asyncHandler(async (req, res) => {
 
 exports.hide = asyncHandler(async (req, res) => {
   const course = await findOwnedCourse(req.params.id, req.user.id);
+  if (course.status === 'Pending') {
+    throw new AppError(409, 'A pending course cannot be hidden until Admin reviews it.');
+  }
   if (course.status !== 'Hidden') {
     await course.update({ status: 'Hidden', updated_at: new Date() });
   }
