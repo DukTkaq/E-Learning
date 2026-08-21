@@ -228,7 +228,7 @@ export default function QuizManagementPage() {
               min={1}
               max={100}
               value={passingScore}
-              onChange={(e) => { setPassingScore(parseInt(e.target.value, 10) || 70); setDirty(true); }}
+              onChange={(e) => { setPassingScore(parseInt(e.target.value, 10) || 40); setDirty(true); }}
               disabled={readOnly}
               className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
             />
