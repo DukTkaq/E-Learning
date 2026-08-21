@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fontkit = require('fontkit');
+const zlib = require('node:zlib');
 
 const {
   buildCertificatePdf,
@@ -40,12 +41,36 @@ test('buildCertificatePdf creates a PDF while preserving Vietnamese input', asyn
   const pdf = await buildCertificatePdf({
     studentName: 'Nguyễn Đăng Khoa',
     courseTitle: 'Lập trình ứng dụng',
-    certificateId: '00000000-0000-4000-8000-000000000001',
     issuedDate: new Date('2026-08-20T00:00:00.000Z'),
   });
 
   assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
   assert.ok(pdf.length > 1500);
+});
+
+const certificatePageContent = (pdf) => {
+  const source = pdf.toString('latin1');
+  const streams = [...source.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)];
+  return streams.flatMap((match) => {
+    try {
+      const content = zlib.inflateSync(Buffer.from(match[1], 'latin1')).toString('latin1');
+      return content.includes('TJ') || content.includes('Tj') ? [content] : [];
+    } catch {
+      return [];
+    }
+  });
+};
+
+test('certificate ID does not appear in the visible PDF content', async () => {
+  const input = {
+    studentName: 'Test Student',
+    courseTitle: 'Test Course',
+    issuedDate: new Date('2026-08-21T00:00:00.000Z'),
+  };
+  const firstPdf = await buildCertificatePdf({ ...input, certificateId: '11111111-1111-4111-8111-111111111111' });
+  const secondPdf = await buildCertificatePdf({ ...input, certificateId: '22222222-2222-4222-8222-222222222222' });
+
+  assert.deepEqual(certificatePageContent(firstPdf), certificatePageContent(secondPdf));
 });
 
 const questions = [
@@ -126,17 +151,21 @@ test('recordQuizAttempt increments the current cycle and preserves a passing res
   assert.equal(passed.quiz.last_score, 6);
 });
 
-test('isCourseComplete requires every lesson watched and every existing quiz passed', () => {
+test('isCourseComplete requires every lesson watched and its quiz passed', () => {
   const lessons = [{ id: 'lesson-1' }, { id: 'lesson-2' }];
-  const quizzes = [{ id: 'quiz-1', lesson_id: 'lesson-1' }];
+  const quizzes = [
+    { id: 'quiz-1', lesson_id: 'lesson-1' },
+    { id: 'quiz-2', lesson_id: 'lesson-2' },
+  ];
   const completeState = {
     lessons: {
       'lesson-1': { completed_at: '2026-08-20', quiz: { quiz_id: 'quiz-1', passed: true } },
-      'lesson-2': { completed_at: '2026-08-20' },
+      'lesson-2': { completed_at: '2026-08-20', quiz: { quiz_id: 'quiz-2', passed: true } },
     },
   };
 
   assert.equal(isCourseComplete(lessons, quizzes, completeState), true);
+  assert.equal(isCourseComplete(lessons, quizzes.slice(0, 1), completeState), false);
   assert.equal(isCourseComplete(lessons, quizzes, {
     lessons: { ...completeState.lessons, 'lesson-1': { completed_at: '2026-08-20' } },
   }), false);

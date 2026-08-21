@@ -6,12 +6,14 @@ const {
   Course,
   Enrollment,
   Lesson,
+  Quiz,
   Review,
   User,
 } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
+const { calculateCourseProgress } = require('../utils/learningProgress');
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -90,12 +92,34 @@ const listMyCourses = async (userId) => {
     order: [['created_at', 'DESC']],
   });
 
-  return enrollments.map((enrollment) => ({
-    enrollment_id: enrollment.id,
-    enrolled_at: enrollment.created_at,
-    progress: enrollment.progress || 0,
-    course: enrollment.Course,
-  }));
+  const courseIds = enrollments.map((enrollment) => enrollment.course_id);
+  const lessons = courseIds.length ? await Lesson.findAll({
+    where: { course_id: courseIds },
+    attributes: ['id', 'course_id'],
+  }) : [];
+  const lessonIds = lessons.map((lesson) => lesson.id);
+  const quizzes = lessonIds.length ? await Quiz.findAll({
+    where: { lesson_id: lessonIds },
+    attributes: ['id', 'lesson_id'],
+  }) : [];
+  const lessonsByCourse = new Map();
+  lessons.forEach((lesson) => {
+    const key = String(lesson.course_id);
+    if (!lessonsByCourse.has(key)) lessonsByCourse.set(key, []);
+    lessonsByCourse.get(key).push(lesson);
+  });
+  const quizByLesson = new Map(quizzes.map((quiz) => [String(quiz.lesson_id), quiz]));
+
+  return enrollments.map((enrollment) => {
+    const courseLessons = lessonsByCourse.get(String(enrollment.course_id)) || [];
+    const courseQuizzes = courseLessons.map((lesson) => quizByLesson.get(String(lesson.id))).filter(Boolean);
+    return {
+      enrollment_id: enrollment.id,
+      enrolled_at: enrollment.created_at,
+      progress: calculateCourseProgress(courseLessons, courseQuizzes, enrollment.learning_state),
+      course: enrollment.Course,
+    };
+  });
 };
 
 exports.list = asyncHandler(async (req, res) => {
