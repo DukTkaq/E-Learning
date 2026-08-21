@@ -49,11 +49,11 @@ const AdminDashboard = () => {
 
   const formatRevenue = (value) => {
     if (!value) return '0 ₫';
-    if (value >= 1000000000) {
-      return (value / 1000000000).toLocaleString('vi-VN') + 'M ₫';
+    if (value >= 1000000) {
+      return parseFloat((value / 1000000).toFixed(3)) + 'm ₫';
     }
     if (value >= 1000) {
-      return (value / 1000).toLocaleString('vi-VN') + 'K ₫';
+      return parseFloat((value / 1000).toFixed(3)) + 'k ₫';
     }
     return value.toLocaleString('vi-VN') + ' ₫';
   };
