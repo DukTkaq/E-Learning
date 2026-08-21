@@ -1,4 +1,5 @@
-import { CheckCircle2, Image, Mail, UserRound, XCircle, Trash2 } from 'lucide-react';
+import { CheckCircle2, Image, Mail, UserRound, XCircle, Trash2, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import CourseStatusBadge from '../courses/CourseStatusBadge';
 import { resolveAssetUrl } from '../../utils/assets';
 
@@ -14,6 +15,9 @@ export default function CourseApprovalCard({ course, reviewing, onReview, onHide
           <p className="mt-3 line-clamp-3 text-sm leading-6 text-gray-500">{course.description || 'No course description provided.'}</p>
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-500"><span className="inline-flex items-center gap-1.5"><UserRound size={15} /> {course.Instructor?.name || 'Instructor'}</span><span className="inline-flex items-center gap-1.5"><Mail size={15} /> {course.Instructor?.email || '—'}</span><strong className="text-primary">{currency.format(Number(course.price || 0))}</strong></div>
           <div className="mt-auto flex justify-end gap-3 border-t border-gray-100 pt-4">
+            <Link to={`/courses/${course.id}`} target="_blank" className="inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2.5 font-semibold text-primary hover:bg-primary/20">
+              <Eye size={18} /> View Details
+            </Link>
             {course.status !== 'Hidden' && (
               <button type="button" disabled={reviewing} onClick={() => onHide(course)} className="inline-flex items-center gap-2 rounded-xl bg-error/10 px-4 py-2.5 font-semibold text-error hover:bg-error/15 disabled:opacity-50">
                 <Trash2 size={18} /> Delete (Violation)

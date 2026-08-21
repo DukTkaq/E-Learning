@@ -111,7 +111,10 @@ exports.mine = asyncHandler(async (req, res) => {
 exports.detail = asyncHandler(async (req, res) => {
   if (!UUID.test(String(req.params.courseId))) throw new AppError(400, 'Course ID must be a valid UUID.');
   const course = await Course.findOne({
-    where: { id: req.params.courseId, status: 'Approved' },
+    where: { 
+      id: req.params.courseId, 
+      ...(req.user?.role === 'Admin' ? {} : { status: 'Approved' })
+    },
     include: [
       ...COURSE_INCLUDE,
       { model: Lesson, attributes: ['id', 'title', 'order_index'], required: false },
@@ -119,7 +122,7 @@ exports.detail = asyncHandler(async (req, res) => {
     ],
     order: [[Lesson, 'order_index', 'ASC'], [Review, 'created_at', 'DESC']],
   });
-  if (!course) throw new AppError(404, 'Approved course not found.');
+  if (!course) throw new AppError(404, 'Course not found.');
 
   let inCart = false;
   let enrolled = false;
