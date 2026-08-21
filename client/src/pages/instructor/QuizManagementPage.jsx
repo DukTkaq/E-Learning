@@ -239,9 +239,42 @@ export default function QuizManagementPage() {
         )}
 
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <label className="block text-sm font-semibold text-slate-700">Quiz title <span className="text-error">*</span><input value={quizTitle} onChange={(event) => { setQuizTitle(event.target.value); setDirty(true); }} disabled={readOnly} className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" placeholder="e.g. Chapter 1 Quiz" /></label>
-          <label className="block text-sm font-semibold text-slate-700">Passing score (%) <span className="text-error">*</span><input type="number" min="1" max="100" value={passingScore} onChange={(event) => { setPassingScore(Number.parseInt(event.target.value, 10) || 70); setDirty(true); }} disabled={readOnly} className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" /></label>
-          <label className="block text-sm font-semibold text-slate-700">Max attempts <span className="text-error">*</span><input type="number" min="1" max="100" value={maxAttempts} onChange={(event) => { setMaxAttempts(Number.parseInt(event.target.value, 10) || 1); setDirty(true); }} disabled={readOnly} className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10" /></label>
+          <label className="block text-sm font-semibold text-slate-700">
+            Quiz title <span className="text-error">*</span>
+            <input
+              value={quizTitle}
+              onChange={(e) => { setQuizTitle(e.target.value); setDirty(true); }}
+              disabled={readOnly}
+              className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+              placeholder="e.g. Chapter 1 Quiz"
+            />
+          </label>
+
+          <label className="block text-sm font-semibold text-slate-700">
+            Passing score (%) <span className="text-error">*</span>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={passingScore}
+              onChange={(e) => { setPassingScore(parseInt(e.target.value, 10) || 40); setDirty(true); }}
+              disabled={readOnly}
+              className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+            />
+          </label>
+
+          <label className="block text-sm font-semibold text-slate-700">
+            Max attempts <span className="text-error">*</span>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={maxAttempts}
+              onChange={(e) => { setMaxAttempts(parseInt(e.target.value, 10) || 1); setDirty(true); }}
+              disabled={readOnly}
+              className="mt-1.5 w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm font-normal outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+            />
+          </label>
         </div>
 
         <div className="mt-4 flex justify-end">

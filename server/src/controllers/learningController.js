@@ -3,13 +3,22 @@ const {
   Review, User, sequelize,
 } = require('../models');
 const { randomUUID } = require('crypto');
+const path = require('path');
 const PDFDocument = require('pdfkit');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const {
+  calculateCourseProgress,
+  getSequentialLessonAccess,
+  isLearningComplete,
+  lessonIsComplete,
+} = require('../utils/learningProgress');
 const { canEnrolledStudentLearn } = require('../rules/courseStatusRules');
 
-const CERTIFICATE_FONT_REGULAR = require.resolve('@fontsource/noto-sans/files/noto-sans-vietnamese-400-normal.woff');
-const CERTIFICATE_FONT_BOLD = require.resolve('@fontsource/noto-sans/files/noto-sans-vietnamese-700-normal.woff');
+const CERTIFICATE_FONT_PATHS = Object.freeze({
+  regular: path.join(__dirname, '../assets/fonts/NotoSans-Regular.ttf'),
+  bold: path.join(__dirname, '../assets/fonts/NotoSans-Bold.ttf'),
+});
 
 const normalizeAnswer = (value) => String(value ?? '').trim().toUpperCase();
 
@@ -133,16 +142,9 @@ const recordQuizAttempt = (lessonState = {}, quiz, grade, attemptedAt = new Date
   };
 };
 
-const isCourseComplete = (lessons, quizzes, learningState = {}) => {
-  const lessonStates = learningState.lessons || {};
-  const quizByLesson = new Map((quizzes || []).map((quiz) => [String(quiz.lesson_id), quiz]));
-  return lessons.length > 0 && lessons.every((lesson) => {
-    const state = lessonStates[String(lesson.id)];
-    if (!state?.completed_at) return false;
-    const quiz = quizByLesson.get(String(lesson.id));
-    return !quiz || (String(state.quiz?.quiz_id) === String(quiz.id) && state.quiz?.passed === true);
-  });
-};
+const isCourseComplete = (lessons, quizzes, learningState = {}) => (
+  isLearningComplete(lessons, quizzes, learningState)
+);
 
 const validateReviewInput = ({ rating, comment }) => {
   if (!Number.isInteger(rating)) throw new Error('Rating must be a whole number.');
@@ -164,20 +166,29 @@ const enrollmentState = (enrollment) => {
   return { ...value, lessons: { ...(value.lessons || {}) } };
 };
 
+const requireLessonAccessible = ({ lessonId, lessons, quizzes, learningState }) => {
+  const access = getSequentialLessonAccess(lessons, quizzes, learningState)[String(lessonId)];
+  if (!access) throw new AppError(404, 'Lesson not found.');
+  if (access.locked) {
+    throw new AppError(409, 'Complete the previous lesson before opening this lesson.');
+  }
+  return access;
+};
+
 const publicCertificate = (certificate) => certificate ? {
   id: certificate.id,
   certificate_url: certificate.certificate_url,
   issued_date: certificate.issued_date,
 } : null;
 
-const buildCertificatePdf = ({ studentName, courseTitle, certificateId, issuedDate }) => new Promise((resolve, reject) => {
+const buildCertificatePdf = ({ studentName, courseTitle, issuedDate }) => new Promise((resolve, reject) => {
   const document = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 56 });
   const chunks = [];
   document.on('data', (chunk) => chunks.push(chunk));
   document.on('end', () => resolve(Buffer.concat(chunks)));
   document.on('error', reject);
-  document.registerFont('NotoSans', CERTIFICATE_FONT_REGULAR);
-  document.registerFont('NotoSansBold', CERTIFICATE_FONT_BOLD);
+  document.registerFont('NotoSans', CERTIFICATE_FONT_PATHS.regular);
+  document.registerFont('NotoSansBold', CERTIFICATE_FONT_PATHS.bold);
   document.rect(24, 24, 793, 547).lineWidth(3).stroke('#4f46e5');
   document.rect(34, 34, 773, 527).lineWidth(1).stroke('#0ea5e9');
   document.moveDown(2);
@@ -192,7 +203,6 @@ const buildCertificatePdf = ({ studentName, courseTitle, certificateId, issuedDa
   document.font('NotoSansBold').fontSize(25).fillColor('#0ea5e9').text(String(courseTitle || ''), { align: 'center' });
   document.moveDown(1.5);
   document.font('NotoSans').fontSize(12).fillColor('#64748b').text(`Issued: ${new Date(issuedDate).toLocaleDateString('en-GB')}`, { align: 'center' });
-  document.text(`Certificate ID: ${certificateId}`, { align: 'center' });
   document.end();
 });
 
@@ -210,18 +220,22 @@ const loadEnrollment = async (userId, courseId, transaction) => {
   return { course, enrollment };
 };
 
-const lessonStates = async (enrollment, lessons) => {
+const lessonStates = async (enrollment, lessons, providedQuizzes) => {
   const lessonIds = lessons.map((lesson) => lesson.id);
   if (!lessonIds.length) return [];
-  const quizzes = await Quiz.findAll({ where: { lesson_id: lessonIds } });
+  const quizzes = providedQuizzes || await Quiz.findAll({ where: { lesson_id: lessonIds } });
   const learningState = enrollmentState(enrollment);
-  const quizByLesson = new Map(quizzes.map((row) => [row.lesson_id, row]));
+  const quizByLesson = new Map(quizzes.map((row) => [String(row.lesson_id), row]));
+  const accessByLesson = getSequentialLessonAccess(lessons, quizzes, learningState);
   return lessons.map((lesson) => {
     const progress = learningState.lessons[String(lesson.id)] || {};
-    const quiz = quizByLesson.get(lesson.id);
+    const quiz = quizByLesson.get(String(lesson.id));
+    const access = accessByLesson[String(lesson.id)];
     return {
       ...lesson.toJSON(),
-      progress_percent: progress.completed_at ? 100 : 0,
+      access_locked: access.locked,
+      access_lock_reason: access.lock_reason,
+      progress_percent: lessonIsComplete(lesson, quiz, learningState) ? 100 : 0,
       completed_at: progress.completed_at || null,
       quiz: quiz ? {
         id: quiz.id,
@@ -267,6 +281,10 @@ exports.courseDetail = asyncHandler(async (req, res) => {
     Lesson.findAll({ where: { course_id: course.id }, order: [['order_index', 'ASC'], ['created_at', 'ASC']] }),
     Review.findOne({ where: { user_id: req.user.id, course_id: course.id } }),
   ]);
+  const lessonIds = lessons.map((lesson) => lesson.id);
+  const quizzes = lessonIds.length ? await Quiz.findAll({ where: { lesson_id: lessonIds } }) : [];
+  const learningState = enrollmentState(enrollment);
+  const enrollmentProgress = calculateCourseProgress(lessons, quizzes, learningState);
   const certificate = await issueCertificateIfEligible({
     userId: req.user.id,
     courseId: course.id,
@@ -275,8 +293,8 @@ exports.courseDetail = asyncHandler(async (req, res) => {
   res.json({
     course: {
       ...course.toJSON(),
-      enrollment: { id: enrollment.id, progress: enrollment.progress || 0, enrolled_at: enrollment.created_at },
-      lessons: await lessonStates(enrollment, lessons),
+      enrollment: { id: enrollment.id, progress: enrollmentProgress, enrolled_at: enrollment.created_at },
+      lessons: await lessonStates(enrollment, lessons, quizzes),
       review,
       certificate: publicCertificate(certificate),
     },
@@ -293,8 +311,16 @@ exports.lessonDetail = asyncHandler(async (req, res) => {
   });
   if (!lesson) throw new AppError(404, 'Lesson not found.');
   const { enrollment } = await loadEnrollment(req.user.id, lesson.course_id);
-  const lessons = await Lesson.findAll({ where: { course_id: lesson.course_id }, order: [['order_index', 'ASC']] });
-  const states = await lessonStates(enrollment, lessons);
+  const lessons = await Lesson.findAll({ where: { course_id: lesson.course_id }, order: [['order_index', 'ASC'], ['created_at', 'ASC']] });
+  const lessonIds = lessons.map((item) => item.id);
+  const quizzes = lessonIds.length ? await Quiz.findAll({ where: { lesson_id: lessonIds } }) : [];
+  requireLessonAccessible({
+    lessonId: lesson.id,
+    lessons,
+    quizzes,
+    learningState: enrollmentState(enrollment),
+  });
+  const states = await lessonStates(enrollment, lessons, quizzes);
   res.json({ lesson: { ...lesson.toJSON(), learning_state: states.find((item) => item.id === lesson.id), course_lessons: states } });
 });
 
@@ -304,9 +330,17 @@ exports.completeLesson = asyncHandler(async (req, res) => {
     const lesson = await Lesson.findByPk(req.params.lessonId, { transaction });
     if (!lesson) throw new AppError(404, 'Lesson not found.');
     const { enrollment } = await loadEnrollment(req.user.id, lesson.course_id, transaction);
-    const quiz = await Quiz.findOne({ where: { lesson_id: lesson.id }, transaction });
-    const now = new Date();
     const learningState = enrollmentState(enrollment);
+    const lessons = await Lesson.findAll({
+      where: { course_id: lesson.course_id },
+      order: [['order_index', 'ASC'], ['created_at', 'ASC']],
+      transaction,
+    });
+    const lessonIds = lessons.map((item) => item.id);
+    const quizzes = lessonIds.length ? await Quiz.findAll({ where: { lesson_id: lessonIds }, transaction }) : [];
+    requireLessonAccessible({ lessonId: lesson.id, lessons, quizzes, learningState });
+    const quiz = quizzes.find((item) => String(item.lesson_id) === String(lesson.id));
+    const now = new Date();
     const lessonKey = String(lesson.id);
     learningState.lessons[lessonKey] = recordLessonWatched(
       learningState.lessons[lessonKey] || {},
@@ -314,9 +348,8 @@ exports.completeLesson = asyncHandler(async (req, res) => {
       now.toISOString(),
     );
 
-    const lessons = await Lesson.findAll({ where: { course_id: lesson.course_id }, transaction });
-    const completedCount = lessons.filter((item) => learningState.lessons[String(item.id)]?.completed_at).length;
-    const enrollmentProgress = lessons.length ? Math.round((completedCount / lessons.length) * 100) : 0;
+    const enrollmentProgress = calculateCourseProgress(lessons, quizzes, learningState);
+    const lessonProgress = lessonIsComplete(lesson, quiz, learningState) ? 100 : 0;
     await enrollment.update({ learning_state: learningState, progress: enrollmentProgress, updated_at: now }, { transaction });
     const certificate = await issueCertificateIfEligible({
       userId: req.user.id,
@@ -327,6 +360,7 @@ exports.completeLesson = asyncHandler(async (req, res) => {
     const progress = learningState.lessons[lessonKey];
     return {
       progress,
+      lessonProgress,
       enrollmentProgress,
       quizState: quiz ? getQuizState({ lessonState: progress, quiz }) : null,
       certificate,
@@ -334,7 +368,7 @@ exports.completeLesson = asyncHandler(async (req, res) => {
   });
   res.json({
     message: 'Lesson completion recorded.',
-    progress: { ...result.progress, progress_percent: 100, enrollment_progress: result.enrollmentProgress },
+    progress: { ...result.progress, progress_percent: result.lessonProgress, enrollment_progress: result.enrollmentProgress },
     quiz: result.quizState,
     certificate: publicCertificate(result.certificate),
   });
@@ -345,14 +379,22 @@ exports.getQuiz = asyncHandler(async (req, res) => {
   const lesson = await Lesson.findByPk(req.params.lessonId);
   if (!lesson) throw new AppError(404, 'Lesson not found.');
   const { enrollment } = await loadEnrollment(req.user.id, lesson.course_id);
-  const quiz = await Quiz.findOne({ where: { lesson_id: lesson.id } });
+  const learningState = enrollmentState(enrollment);
+  const lessons = await Lesson.findAll({
+    where: { course_id: lesson.course_id },
+    order: [['order_index', 'ASC'], ['created_at', 'ASC']],
+  });
+  const lessonIds = lessons.map((item) => item.id);
+  const quizzes = lessonIds.length ? await Quiz.findAll({ where: { lesson_id: lessonIds } }) : [];
+  requireLessonAccessible({ lessonId: lesson.id, lessons, quizzes, learningState });
+  const quiz = quizzes.find((item) => String(item.lesson_id) === String(lesson.id));
   if (!quiz) throw new AppError(404, 'This lesson does not have a quiz.');
   const questions = await Question.findAll({
     where: { quiz_id: quiz.id },
     attributes: ['id', 'content', 'option_a', 'option_b', 'option_c', 'option_d'],
     order: [['created_at', 'ASC']],
   });
-  const lessonState = enrollmentState(enrollment).lessons[String(lesson.id)] || {};
+  const lessonState = learningState.lessons[String(lesson.id)] || {};
   res.json({
     quiz: {
       ...quiz.toJSON(),
@@ -369,6 +411,14 @@ exports.submitQuiz = asyncHandler(async (req, res) => {
     if (!quiz) throw new AppError(404, 'Quiz not found.');
     const { enrollment } = await loadEnrollment(req.user.id, quiz.Lesson.course_id, transaction);
     const learningState = enrollmentState(enrollment);
+    const lessons = await Lesson.findAll({
+      where: { course_id: quiz.Lesson.course_id },
+      order: [['order_index', 'ASC'], ['created_at', 'ASC']],
+      transaction,
+    });
+    const lessonIds = lessons.map((item) => item.id);
+    const quizzes = lessonIds.length ? await Quiz.findAll({ where: { lesson_id: lessonIds }, transaction }) : [];
+    requireLessonAccessible({ lessonId: quiz.lesson_id, lessons, quizzes, learningState });
     const lessonKey = String(quiz.lesson_id);
     const lessonState = learningState.lessons[lessonKey] || {};
     const state = getQuizState({ lessonState, quiz });
@@ -387,7 +437,8 @@ exports.submitQuiz = asyncHandler(async (req, res) => {
     const attemptedAt = new Date();
     const updatedLessonState = recordQuizAttempt(lessonState, quiz, grade, attemptedAt.toISOString());
     learningState.lessons[lessonKey] = updatedLessonState;
-    await enrollment.update({ learning_state: learningState, updated_at: attemptedAt }, { transaction });
+    const enrollmentProgress = calculateCourseProgress(lessons, quizzes, learningState);
+    await enrollment.update({ learning_state: learningState, progress: enrollmentProgress, updated_at: attemptedAt }, { transaction });
     const certificate = grade.passed ? await issueCertificateIfEligible({
       userId: req.user.id,
       courseId: quiz.Lesson.course_id,
@@ -408,12 +459,14 @@ exports.submitQuiz = asyncHandler(async (req, res) => {
       },
       grade,
       state: updatedState,
+      enrollmentProgress,
       certificate,
     };
   });
   res.status(201).json({
     attempt: { ...response.attempt, feedback: response.grade.feedback },
     quiz_state: response.state,
+    enrollment_progress: response.enrollmentProgress,
     certificate: publicCertificate(response.certificate),
   });
 });
@@ -434,7 +487,6 @@ exports.downloadCertificate = asyncHandler(async (req, res) => {
   const pdf = await buildCertificatePdf({
     studentName: student.name,
     courseTitle: course.title,
-    certificateId: certificate.id,
     issuedDate: certificate.issued_date,
   });
   res.setHeader('Content-Type', 'application/pdf');
@@ -460,6 +512,7 @@ exports.createReview = asyncHandler(async (req, res) => {
 exports.__test = {
   buildCertificatePdf,
   calculateQuizResult,
+  certificateFontPaths: CERTIFICATE_FONT_PATHS,
   getQuizState,
   isCourseComplete,
   recordQuizAttempt,

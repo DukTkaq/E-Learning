@@ -41,7 +41,7 @@ export default function LessonTable({ lessons, loading, readOnly = false, hasFil
                     <span className="font-semibold text-slate-800">{lesson.title}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate">{lesson.video_url}</td>
+                <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate" title={lesson.video_url}>{lesson.video_url}</td>
                 <td className="px-6 py-4">
                   {lesson.Quiz ? (
                     <button

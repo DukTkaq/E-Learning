@@ -11,7 +11,6 @@ export const getPaginationItems = (currentPage, totalPages) => {
 
   const current = clampPage(currentPage, total);
   if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
-
   if (current <= 3) return [1, 2, 3, 'ellipsis-right', total];
   if (current >= total - 2) return [1, 'ellipsis-left', total - 2, total - 1, total];
   return [1, 'ellipsis-left', current - 1, current, current + 1, 'ellipsis-right', total];

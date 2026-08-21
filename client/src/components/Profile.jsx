@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Shield, Camera, Edit2, Save, X, Lock, Eye, EyeOff, Briefcase, Link as LinkIcon, AlignLeft } from 'lucide-react'
+import { User, Mail, Shield, Camera, Edit2, Save, X, Lock, Eye, EyeOff, Briefcase, Link as LinkIcon, AlignLeft, BookOpen, Award, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../utils/api'
 
@@ -39,6 +39,8 @@ export default function Profile() {
   const fileInputRef = useRef(null)
   const navigate = useNavigate()
 
+  const [stats, setStats] = useState(null)
+
   useEffect(() => {
     const userData = localStorage.getItem('user')
     if (!userData) {
@@ -50,6 +52,12 @@ export default function Profile() {
       const parsedUser = JSON.parse(userData)
       setUser(parsedUser)
       setEditName(parsedUser.name)
+      
+      // Fetch stats
+      api.get('/auth/profile/stats')
+        .then(res => setStats(res.data))
+        .catch(err => console.error('Error fetching stats:', err))
+        
     } catch {
       navigate('/login')
     }
@@ -289,6 +297,40 @@ export default function Profile() {
               </div>
               <p className="text-xs text-gray-400 mt-1">* Email address cannot be changed</p>
             </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Joined Date
+              </label>
+              <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium">
+                {stats?.created_at ? new Date(stats.created_at).toLocaleDateString('en-US') : 'Loading...'}
+              </div>
+            </div>
+
+            {(!user.role || user.role === 'Student') && stats && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    Enrolled Courses
+                  </label>
+                  <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-primary font-bold">
+                    {stats.enrolledCourses}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                    <Award className="w-4 h-4" />
+                    Certificates
+                  </label>
+                  <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-amber-500 font-bold">
+                    {stats.certificatesReceived}
+                  </div>
+                </div>
+              </>
+            )}
 
             {user.role === 'Instructor' && (
               <>
