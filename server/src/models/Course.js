@@ -31,6 +31,13 @@ const Course = sequelize.define('Course', {
       isIn: [['Draft', 'Pending', 'Approved', 'Rejected', 'Hidden']]
     }
   },
+  rejection_reason: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    validate: {
+      len: [0, 1000]
+    }
+  },
   instructor_id: {
     type: DataTypes.UUID,
     allowNull: false

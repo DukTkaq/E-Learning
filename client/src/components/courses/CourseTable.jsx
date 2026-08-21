@@ -1,5 +1,6 @@
 import { Image } from 'lucide-react';
 import CourseStatusBadge from './CourseStatusBadge';
+import CourseRejectionReasonButton from './CourseRejectionReasonButton';
 import CourseActionButtons from './CourseActionButtons';
 import { resolveAssetUrl } from '../../utils/assets';
 
@@ -60,7 +61,12 @@ export default function CourseTable({
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">{course.Category?.name || '—'}</td>
                 <td className="px-6 py-4 text-sm font-semibold text-slate-700">{currency.format(Number(course.price))}</td>
-                <td className="px-6 py-4"><CourseStatusBadge status={course.status} /></td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
+                    <CourseStatusBadge status={course.status} />
+                    {course.status === 'Rejected' && <CourseRejectionReasonButton reason={course.rejection_reason} />}
+                  </div>
+                </td>
                 <td className="px-6 py-4">
                   <CourseActionButtons
                     course={course}

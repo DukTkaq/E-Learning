@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Shield, Camera, Edit2, Save, X, Lock, Eye, EyeOff, Briefcase, Link as LinkIcon, AlignLeft, BookOpen, CheckCircle, Award, Calendar } from 'lucide-react'
+import { User, Mail, Shield, Camera, Edit2, Save, X, Lock, Eye, EyeOff, Briefcase, Link as LinkIcon, AlignLeft, BookOpen, Award, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../utils/api'
 

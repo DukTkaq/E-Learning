@@ -1,20 +1,41 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Edit3, LoaderCircle, LockKeyhole, Plus, RefreshCw, Save, Trash2, HelpCircle } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, HelpCircle, LoaderCircle, LockKeyhole, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
+import ContentFilterBar from '../../components/lessons/ContentFilterBar';
 import QuestionFormModal from '../../components/lessons/QuestionFormModal';
+import QuestionTable from '../../components/lessons/QuestionTable';
+import Pagination from '../../components/common/Pagination';
 import { fetchQuiz, createQuiz, updateQuiz, deleteQuiz, addQuestion, updateQuestion, deleteQuestion } from '../../features/lessons/lessonApi';
 import { fetchInstructorCourse } from '../../features/courses/courseApi';
 import { canEditCourse, getCourseReadOnlyNotice } from '../../features/courses/courseStatus';
+import { clampPage } from '../../utils/pagination';
+
+const PAGE_LIMIT = 10;
+const EMPTY_PAGINATION = { page: 1, limit: PAGE_LIMIT, total_items: 0, total_pages: 0 };
+
+function parsePage(value) {
+  const page = Number.parseInt(value || '1', 10);
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
 
 export default function QuizManagementPage() {
   const { courseId, lessonId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const questionListRef = useRef(null);
+
+  const searchFilter = searchParams.get('search') || '';
+  const answerFilter = searchParams.get('answer') || '';
+  const currentPage = parsePage(searchParams.get('page'));
 
   const [course, setCourse] = useState(null);
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [pagination, setPagination] = useState(EMPTY_PAGINATION);
+  const [totalQuestions, setTotalQuestions] = useState(0);
+  const [searchInput, setSearchInput] = useState(searchFilter);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,51 +43,81 @@ export default function QuizManagementPage() {
   const [passingScore, setPassingScore] = useState(40);
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [dirty, setDirty] = useState(false);
-
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(undefined);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [quizRes, courseRes] = await Promise.all([
-        fetchQuiz(courseId, lessonId),
+      const [quizResponse, courseResponse] = await Promise.all([
+        fetchQuiz(courseId, lessonId, {
+          search: searchFilter || undefined,
+          answer: answerFilter || undefined,
+          page: currentPage,
+          limit: PAGE_LIMIT,
+        }),
         fetchInstructorCourse(courseId),
       ]);
-      setCourse(courseRes.data.course || null);
-      const q = quizRes.data.quiz;
-      setQuiz(q);
-      setQuestions(quizRes.data.questions || []);
-      if (q) {
-        setQuizTitle(q.title);
-        setPassingScore(q.passing_score);
-        setMaxAttempts(q.max_attempts);
+
+      setCourse(courseResponse.data.course || null);
+      const nextQuiz = quizResponse.data.quiz;
+      setQuiz(nextQuiz);
+      setQuestions(quizResponse.data.questions || []);
+      setPagination(quizResponse.data.pagination || EMPTY_PAGINATION);
+      setTotalQuestions(quizResponse.data.summary?.total || 0);
+
+      if (nextQuiz) {
+        setQuizTitle(nextQuiz.title);
+        setPassingScore(nextQuiz.passing_score);
+        setMaxAttempts(nextQuiz.max_attempts);
         setDirty(false);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Could not load quiz data.');
+      setQuestions([]);
+      setPagination(EMPTY_PAGINATION);
     } finally {
       setLoading(false);
     }
-  }, [courseId, lessonId]);
+  }, [answerFilter, courseId, currentPage, lessonId, searchFilter]);
 
   useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { setSearchInput(searchFilter); }, [searchFilter]);
+
+  const validPage = clampPage(currentPage, pagination.total_pages);
+  const correctingPage = !loading && quiz && currentPage !== validPage;
+
+  useEffect(() => {
+    if (!correctingPage) return;
+    const next = new URLSearchParams(searchParams);
+    if (validPage === 1) next.delete('page'); else next.set('page', String(validPage));
+    setSearchParams(next, { replace: true });
+  }, [correctingPage, searchParams, setSearchParams, validPage]);
 
   const readOnly = Boolean(course && !canEditCourse(course.status));
   const readOnlyNotice = getCourseReadOnlyNotice(course?.status);
+  const hasFilters = Boolean(searchFilter || answerFilter);
+
+  const updateFilter = (key, value) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value); else next.delete(key);
+    next.delete('page');
+    setSearchParams(next);
+  };
+
+  const changePage = (page) => {
+    if (page < 1 || page > pagination.total_pages || page === currentPage) return;
+    const next = new URLSearchParams(searchParams);
+    if (page === 1) next.delete('page'); else next.set('page', String(page));
+    setSearchParams(next);
+    questionListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const createNewQuiz = async () => {
-    if (!quizTitle.trim()) {
-      toast.error('Please enter a quiz title first.');
-      return;
-    }
+    if (!quizTitle.trim()) return toast.error('Please enter a quiz title first.');
     setSubmitting(true);
     try {
-      await createQuiz(courseId, lessonId, {
-        title: quizTitle.trim(),
-        passing_score: passingScore,
-        max_attempts: maxAttempts,
-      });
+      await createQuiz(courseId, lessonId, { title: quizTitle.trim(), passing_score: passingScore, max_attempts: maxAttempts });
       toast.success('Quiz created successfully.');
       setDirty(false);
       await loadData();
@@ -78,17 +129,10 @@ export default function QuizManagementPage() {
   };
 
   const saveQuizSettings = async () => {
-    if (!quizTitle.trim()) {
-      toast.error('Quiz title cannot be empty.');
-      return;
-    }
+    if (!quizTitle.trim()) return toast.error('Quiz title cannot be empty.');
     setSubmitting(true);
     try {
-      await updateQuiz(courseId, lessonId, {
-        title: quizTitle.trim(),
-        passing_score: passingScore,
-        max_attempts: maxAttempts,
-      });
+      await updateQuiz(courseId, lessonId, { title: quizTitle.trim(), passing_score: passingScore, max_attempts: maxAttempts });
       toast.success('Quiz settings saved.');
       setDirty(false);
     } catch (error) {
@@ -112,14 +156,12 @@ export default function QuizManagementPage() {
     try {
       await deleteQuiz(courseId, lessonId);
       toast.success('Quiz deleted successfully.');
+      setSearchParams({});
       await loadData();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Could not delete quiz.');
     }
   };
-
-  const openAddQuestion = () => { setEditingQuestion(undefined); setQuestionModalOpen(true); };
-  const openEditQuestion = (q) => { setEditingQuestion(q); setQuestionModalOpen(true); };
 
   const submitQuestion = async (payload) => {
     setSubmitting(true);
@@ -160,20 +202,14 @@ export default function QuizManagementPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <LoaderCircle className="animate-spin text-primary" size={32} />
-      </div>
-    );
+  if (loading && !course) {
+    return <div className="flex items-center justify-center py-20"><LoaderCircle className="animate-spin text-primary" size={32} /></div>;
   }
 
   return (
     <section>
       <div className="mb-6">
-        <button type="button" onClick={() => navigate(`/instructor/courses/${courseId}/lessons`)} className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-primary transition">
-          <ArrowLeft size={16} /> Back to lessons
-        </button>
+        <button type="button" onClick={() => navigate(`/instructor/courses/${courseId}/lessons`)} className="mb-3 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 transition hover:text-primary"><ArrowLeft size={16} /> Back to lessons</button>
         <div className="mb-2 flex items-center gap-2 text-primary"><HelpCircle size={20} /><span className="text-sm font-bold uppercase tracking-wider">Quiz Management</span></div>
         <h1 className="text-3xl font-bold text-slate-900">{course?.title || 'Loading...'}</h1>
       </div>
@@ -185,19 +221,12 @@ export default function QuizManagementPage() {
         </div>
       )}
 
-      {/* Quiz Settings Card */}
       <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900">Quiz Settings</h2>
           <div className="flex gap-2">
-            {quiz && !readOnly && (
-              <button type="button" onClick={removeQuiz} className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 font-semibold text-red-600 shadow-sm transition hover:bg-red-50">
-                <Trash2 size={16} /> Delete quiz
-              </button>
-            )}
-            <button type="button" onClick={loadData} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 font-semibold text-gray-600 shadow-sm transition hover:border-primary/30 hover:text-primary">
-              <RefreshCw size={16} /> Refresh
-            </button>
+            {quiz && !readOnly && <button type="button" onClick={removeQuiz} className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 font-semibold text-red-600 shadow-sm transition hover:bg-red-50"><Trash2 size={16} /> Delete quiz</button>}
+            <button type="button" onClick={loadData} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 font-semibold text-gray-600 shadow-sm transition hover:border-primary/30 hover:text-primary disabled:opacity-60"><RefreshCw size={16} /> Refresh</button>
           </div>
         </div>
 
@@ -205,7 +234,7 @@ export default function QuizManagementPage() {
           <div className="rounded-xl border border-dashed border-primary/25 bg-primary/5 p-6 text-center">
             <HelpCircle className="mx-auto mb-2 text-primary" size={32} />
             <p className="font-semibold text-slate-800">No quiz for this lesson yet</p>
-            <p className="mt-1 text-sm text-gray-500">{readOnly ? 'No quiz was added before this course was submitted.' : 'Configure the settings below and click "Create quiz" to get started.'}</p>
+            <p className="mt-1 text-sm text-gray-500">{readOnly ? 'No quiz was added before this course was submitted.' : 'Configure the settings below and create the quiz.'}</p>
           </div>
         )}
 
@@ -250,92 +279,54 @@ export default function QuizManagementPage() {
 
         <div className="mt-4 flex justify-end">
           {!readOnly && (!quiz ? (
-            <button type="button" onClick={createNewQuiz} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting && <LoaderCircle className="animate-spin" size={18} />}
-              Create quiz
-            </button>
+            <button type="button" onClick={createNewQuiz} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:opacity-60">{submitting && <LoaderCircle className="animate-spin" size={18} />}Create quiz</button>
           ) : dirty && (
-            <button type="button" onClick={saveQuizSettings} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting && <LoaderCircle className="animate-spin" size={18} />}
-              <Save size={16} /> Save changes
-            </button>
+            <button type="button" onClick={saveQuizSettings} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-5 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90 disabled:opacity-60">{submitting && <LoaderCircle className="animate-spin" size={18} />}<Save size={16} /> Save changes</button>
           ))}
         </div>
       </div>
 
-      {/* Questions Table */}
       {quiz && (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-            <h3 className="text-lg font-bold text-slate-900">Questions ({questions.length})</h3>
-            {!readOnly && (
-              <button type="button" onClick={openAddQuestion} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90">
-                <Plus size={16} /> Add question
-              </button>
-            )}
+        <div ref={questionListRef} className="mt-6 scroll-mt-24 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="flex flex-col justify-between gap-3 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Questions ({totalQuestions})</h3>
+              {hasFilters && <p className="mt-1 text-sm text-gray-500">{pagination.total_items} matching questions</p>}
+            </div>
+            {!readOnly && <button type="button" onClick={() => { setEditingQuestion(undefined); setQuestionModalOpen(true); }} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-secondary px-4 py-2.5 font-semibold text-white shadow-lg shadow-primary/20 transition hover:opacity-90"><Plus size={16} /> Add question</button>}
           </div>
 
-          {!questions.length ? (
-            <div className="p-12 text-center">
-              <HelpCircle className="mx-auto mb-3 text-gray-300" size={40} />
-              <p className="font-semibold text-slate-800">No questions yet</p>
-              <p className="mt-1 text-sm text-gray-500">Click "Add question" to create your first question.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] text-left">
-                <thead className="border-b border-gray-100 bg-slate-50 text-xs uppercase tracking-wide text-gray-500">
-                  <tr>
-                    <th className="px-6 py-3 font-semibold w-10">#</th>
-                    <th className="px-6 py-3 font-semibold">Question</th>
-                    <th className="px-6 py-3 font-semibold">A</th>
-                    <th className="px-6 py-3 font-semibold">B</th>
-                    <th className="px-6 py-3 font-semibold">C</th>
-                    <th className="px-6 py-3 font-semibold">D</th>
-                    <th className="px-6 py-3 font-semibold">Answer</th>
-                    <th className="px-6 py-3 text-right font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {questions.map((q, index) => (
-                    <tr key={q.id} className="transition-colors hover:bg-slate-50/70">
-                      <td className="px-6 py-4 text-sm font-medium text-gray-500">{index + 1}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-800 max-w-[250px]">
-                        <p className="line-clamp-2">{q.content}</p>
-                      </td>
-                      <td className={`px-6 py-4 text-sm ${q.correct_answer === 'A' ? 'font-bold text-green-600 bg-green-50' : 'text-gray-600'}`}>{q.option_a}</td>
-                      <td className={`px-6 py-4 text-sm ${q.correct_answer === 'B' ? 'font-bold text-green-600 bg-green-50' : 'text-gray-600'}`}>{q.option_b}</td>
-                      <td className={`px-6 py-4 text-sm ${q.correct_answer === 'C' ? 'font-bold text-green-600 bg-green-50' : 'text-gray-600'}`}>{q.option_c}</td>
-                      <td className={`px-6 py-4 text-sm ${q.correct_answer === 'D' ? 'font-bold text-green-600 bg-green-50' : 'text-gray-600'}`}>{q.option_d}</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-green-100 text-xs font-bold text-green-700">{q.correct_answer}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {readOnly ? (
-                          <span className="block text-right text-xs font-semibold text-gray-400">Read only</span>
-                        ) : (
-                          <div className="flex justify-end gap-1">
-                            <button type="button" onClick={() => openEditQuestion(q)} className="rounded-lg p-2 text-gray-400 hover:bg-primary/10 hover:text-primary" title="Edit">
-                              <Edit3 size={16} />
-                            </button>
-                            <button type="button" onClick={() => removeQuestion(q)} className="rounded-lg p-2 text-gray-400 hover:bg-error/10 hover:text-error" title="Delete">
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="p-4 pb-0">
+            <ContentFilterBar
+              search={searchInput}
+              placeholder="Search question or answer option..."
+              disabled={loading}
+              hasFilters={Boolean(searchInput.trim() || answerFilter)}
+              onSearchChange={setSearchInput}
+              onSubmit={(event) => { event.preventDefault(); updateFilter('search', searchInput.trim()); }}
+              onReset={() => { setSearchInput(''); setSearchParams({}); }}
+            >
+              <select value={answerFilter} onChange={(event) => updateFilter('answer', event.target.value)} disabled={loading} className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 outline-none focus:border-primary disabled:opacity-60">
+                <option value="">All correct answers</option>
+                {['A', 'B', 'C', 'D'].map((answer) => <option key={answer} value={answer}>Correct answer {answer}</option>)}
+              </select>
+            </ContentFilterBar>
+          </div>
+
+          <QuestionTable
+            questions={questions}
+            loading={loading || correctingPage}
+            readOnly={readOnly}
+            startIndex={(pagination.page - 1) * pagination.limit}
+            hasFilters={hasFilters}
+            onEdit={(question) => { setEditingQuestion(question); setQuestionModalOpen(true); }}
+            onDelete={removeQuestion}
+          />
+          <div className="border-t border-gray-100 p-5"><Pagination page={pagination.page} totalPages={pagination.total_pages} onPageChange={changePage} disabled={loading} ariaLabel="Question pagination" /></div>
         </div>
       )}
 
-      {questionModalOpen && !readOnly && (
-        <QuestionFormModal question={editingQuestion} submitting={submitting} onClose={() => setQuestionModalOpen(false)} onSubmit={submitQuestion} />
-      )}
+      {questionModalOpen && !readOnly && <QuestionFormModal question={editingQuestion} submitting={submitting} onClose={() => setQuestionModalOpen(false)} onSubmit={submitQuestion} />}
     </section>
   );
 }
