@@ -76,8 +76,8 @@ exports.getDashboardMetrics = async (req, res) => {
     const instructorRole = await Role.findOne({ where: { role_name: 'Instructor' } });
 
     // 2. Count metrics
-    const totalUsers = await User.count({ where: { role_id: studentRole?.role_id || 2 } });
-    const totalInstructors = await User.count({ where: { role_id: instructorRole?.role_id || 3 } });
+    const totalUsers = await User.count({ where: { role_id: studentRole?.id || 3 } });
+    const totalInstructors = await User.count({ where: { role_id: instructorRole?.id || 2 } });
     const totalCourses = await Course.count();
     
     // Mock Revenue for now since we don't have a complex payment system populated yet
