@@ -1,6 +1,8 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/User');
 const Role = require('../models/Role');
+const Enrollment = require('../models/Enrollment');
+const Certificate = require('../models/Certificate');
 const nodemailer = require('nodemailer');
 
 const register = async (req, res) => {
@@ -379,6 +381,31 @@ const applyInstructor = async (req, res) => {
   }
 };
 
+const getProfileStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get user created_at
+    const user = await User.findByPk(userId, { attributes: ['created_at'] });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Count enrollments
+    const enrolledCourses = await Enrollment.count({ where: { user_id: userId } });
+    
+    // Count certificates
+    const certificatesReceived = await Certificate.count({ where: { user_id: userId } });
+    
+    res.json({
+      created_at: user.created_at,
+      enrolledCourses,
+      certificatesReceived
+    });
+  } catch (error) {
+    console.error('Error getting profile stats:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -387,5 +414,6 @@ module.exports = {
   changePassword,
   forgotPassword,
   resetPassword,
-  applyInstructor
+  applyInstructor,
+  getProfileStats
 };

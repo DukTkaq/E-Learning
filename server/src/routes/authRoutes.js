@@ -26,6 +26,9 @@ router.post('/forgot-password', authController.forgotPassword);
 // Reset Password API
 router.post('/reset-password', authController.resetPassword);
 
+// Get Profile Stats API
+router.get('/profile/stats', verifyToken, authController.getProfileStats);
+
 // Apply to become an instructor API
 router.post('/apply-instructor', verifyToken, authController.applyInstructor);
 
