@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const { Category, Course, User } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
 
 const FILTER_STATUSES = new Set(['Pending', 'Approved', 'Rejected', 'Hidden']);
 const REVIEW_STATUSES = new Set(['Approved', 'Rejected']);
@@ -11,18 +12,38 @@ const COURSE_INCLUDE = [
   { model: User, as: 'Instructor', attributes: ['id', 'name', 'email'] },
 ];
 
-const listCourses = (filters = {}) => {
+const parseCategoryId = (value) => {
+  if (!value) return null;
+  const categoryId = Number(value);
+  if (!Number.isInteger(categoryId) || categoryId <= 0) {
+    throw new AppError(400, 'Category must be a positive integer.');
+  }
+  return categoryId;
+};
+
+const listCourses = async (filters = {}) => {
+  const pagination = parsePagination(filters, { defaultLimit: 6, maxLimit: 50 });
   const status = String(filters.status || '').trim();
   const search = String(filters.search || '').trim();
+  const categoryId = parseCategoryId(filters.category_id);
   const where = {};
 
   if (status) {
     if (!FILTER_STATUSES.has(status)) throw new AppError(400, 'Invalid course status filter.');
     where.status = status;
   } else where.status = { [Op.ne]: 'Draft' };
-  if (search) where.title = { [Op.iLike]: `%${search}%` };
+  if (categoryId) where.category_id = categoryId;
+  if (search) {
+    where[Op.or] = [
+      { title: { [Op.iLike]: `%${search}%` } },
+      { description: { [Op.iLike]: `%${search}%` } },
+      { '$Category.name$': { [Op.iLike]: `%${search}%` } },
+      { '$Instructor.name$': { [Op.iLike]: `%${search}%` } },
+      { '$Instructor.email$': { [Op.iLike]: `%${search}%` } },
+    ];
+  }
 
-  return Course.findAll({
+  const { count, rows: courses } = await Course.findAndCountAll({
     where,
     include: COURSE_INCLUDE,
     order: [
@@ -30,7 +51,19 @@ const listCourses = (filters = {}) => {
       ['updated_at', 'DESC'],
       ['created_at', 'DESC'],
     ],
+    limit: pagination.limit,
+    offset: pagination.offset,
+    distinct: true,
   });
+
+  return {
+    courses,
+    pagination: buildPaginationMeta({
+      page: pagination.page,
+      limit: pagination.limit,
+      totalItems: count,
+    }),
+  };
 };
 
 const reviewCourse = async (courseId, status) => {
@@ -58,8 +91,7 @@ const hideCourse = async (courseId) => {
 };
 
 exports.list = asyncHandler(async (req, res) => {
-  const courses = await listCourses(req.query);
-  res.json({ courses });
+  res.json(await listCourses(req.query));
 });
 
 exports.review = asyncHandler(async (req, res) => {

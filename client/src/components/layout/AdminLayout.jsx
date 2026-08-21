@@ -7,10 +7,9 @@ import {
   CheckSquare, 
   UserCheck,
   LogOut, 
-  Search, 
-  Bell, 
   Menu,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -18,6 +17,7 @@ const AdminLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -32,6 +32,7 @@ const AdminLayout = ({ children }) => {
     { name: 'Categories', path: '/admin/categories', icon: FolderTree },
     { name: 'Course Approvals', path: '/admin/approvals', icon: CheckSquare },
     { name: 'Instructor Approvals', path: '/admin/instructor-approvals', icon: UserCheck },
+    { name: 'My Profile', path: '/admin/profile', icon: User },
   ];
 
   return (
@@ -94,27 +95,21 @@ const AdminLayout = ({ children }) => {
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
         <header className="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 shrink-0">
-          <div className="flex items-center gap-4 flex-1">
-            <div className="relative w-64 max-w-md hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-              />
-            </div>
+          <div className="flex-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">E-Learning</p>
+            <p className="text-sm text-gray-500">Manage users, content and platform approvals</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="h-8 w-px bg-gray-200 mx-1"></div>
-            <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+            <Link to="/admin/profile" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-gray-800 leading-tight">Admin User</p>
+                <p className="text-sm font-semibold text-gray-800 leading-tight">{user?.name || 'Admin User'}</p>
                 <p className="text-xs text-gray-500">Administrator</p>
               </div>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold shadow-sm">
-                A
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold shadow-sm" title="My Profile">
+                {(user?.name || 'A').charAt(0).toUpperCase()}
               </div>
-            </div>
+            </Link>
           </div>
         </header>
 
