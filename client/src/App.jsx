@@ -119,6 +119,7 @@ function App() {
           } />
           <Route path="/admin/approvals" element={<AdminLayout><CourseApprovalsPage /></AdminLayout>} />
           <Route path="/admin/instructor-approvals" element={<AdminLayout><InstructorApprovalsPage /></AdminLayout>} />
+          <Route path="/admin/profile" element={<AdminLayout><Profile /></AdminLayout>} />
         </Route>
 
         {/* Instructor Routes */}
