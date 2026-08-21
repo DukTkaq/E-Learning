@@ -50,10 +50,10 @@ const AdminDashboard = () => {
   const formatRevenue = (value) => {
     if (!value) return '0 ₫';
     if (value >= 1000000) {
-      return parseFloat((value / 1000000).toFixed(3)) + 'm ₫';
+      return parseFloat((value / 1000000).toFixed(3)) + 'M ₫';
     }
     if (value >= 1000) {
-      return parseFloat((value / 1000).toFixed(3)) + 'k ₫';
+      return parseFloat((value / 1000).toFixed(3)) + 'K ₫';
     }
     return value.toLocaleString('vi-VN') + ' ₫';
   };
