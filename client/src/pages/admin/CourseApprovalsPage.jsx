@@ -89,21 +89,41 @@ export default function CourseApprovalsPage() {
   };
 
   const handleReview = async (course, nextStatus) => {
+    if (nextStatus === 'Rejected') {
+      const result = await Swal.fire({
+        title: 'Reject this course?',
+        text: 'Tell the instructor exactly what must be fixed before resubmitting.',
+        input: 'textarea',
+        inputLabel: 'Rejection reason',
+        inputPlaceholder: 'Example: Lesson 2 is missing clear audio and Quiz 3 needs more questions.',
+        inputAttributes: { maxlength: '1000', 'aria-label': 'Course rejection reason' },
+        inputValidator: (value) => (!value?.trim() ? 'Please enter a rejection reason.' : undefined),
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Reject course',
+        confirmButtonColor: '#ef4444',
+      });
+      if (!result.isConfirmed) return;
+      await sendReview(course, nextStatus, result.value.trim());
+      return;
+    }
+
     const result = await Swal.fire({
-      title: `${nextStatus === 'Approved' ? 'Approve' : 'Reject'} this course?`,
-      text: nextStatus === 'Approved'
-        ? 'Students will be able to discover and purchase it.'
-        : 'The instructor can edit and resubmit it for approval.',
-      icon: nextStatus === 'Approved' ? 'question' : 'warning',
+      title: 'Approve this course?',
+      text: 'Students will be able to discover and purchase it.',
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: nextStatus === 'Approved' ? 'Approve course' : 'Reject course',
-      confirmButtonColor: nextStatus === 'Approved' ? '#22c55e' : '#ef4444',
+      confirmButtonText: 'Approve course',
+      confirmButtonColor: '#22c55e',
     });
     if (!result.isConfirmed) return;
+    await sendReview(course, nextStatus);
+  };
 
+  const sendReview = async (course, nextStatus, rejectionReason) => {
     setReviewingId(course.id);
     try {
-      await reviewCourse(course.id, nextStatus);
+      await reviewCourse(course.id, nextStatus, rejectionReason);
       toast.success(`Course ${nextStatus.toLowerCase()} successfully.`);
       await loadCourses();
     } catch (error) {

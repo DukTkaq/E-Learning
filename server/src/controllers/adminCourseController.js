@@ -3,9 +3,9 @@ const { Category, Course, User } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
+const { getCourseReviewUpdate } = require('../rules/courseReviewRules');
 
 const FILTER_STATUSES = new Set(['Pending', 'Approved', 'Rejected', 'Hidden']);
-const REVIEW_STATUSES = new Set(['Approved', 'Rejected']);
 
 const COURSE_INCLUDE = [
   { model: Category, attributes: ['id', 'name'] },
@@ -66,18 +66,15 @@ const listCourses = async (filters = {}) => {
   };
 };
 
-const reviewCourse = async (courseId, status) => {
-  if (!REVIEW_STATUSES.has(status)) {
-    throw new AppError(400, 'Course can only be approved or rejected.');
-  }
-
+const reviewCourse = async (courseId, reviewPayload) => {
+  const reviewUpdate = getCourseReviewUpdate(reviewPayload);
   const course = await Course.findByPk(courseId);
   if (!course) throw new AppError(404, 'Course not found.');
   if (course.status !== 'Pending') {
     throw new AppError(409, 'Only pending courses can be reviewed.');
   }
 
-  await course.update({ status, updated_at: new Date() });
+  await course.update({ ...reviewUpdate, updated_at: new Date() });
   return Course.findByPk(courseId, { include: COURSE_INCLUDE });
 };
 
@@ -95,7 +92,7 @@ exports.list = asyncHandler(async (req, res) => {
 });
 
 exports.review = asyncHandler(async (req, res) => {
-  const course = await reviewCourse(req.params.id, req.body.status);
+  const course = await reviewCourse(req.params.id, req.body);
   res.json({ message: `Course ${course.status.toLowerCase()} successfully.`, course });
 });
 

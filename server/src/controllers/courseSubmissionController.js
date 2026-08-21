@@ -42,6 +42,10 @@ exports.submit = asyncHandler(async (req, res) => {
     throw new AppError(400, 'Complete the course before submitting it for approval.', issues);
   }
 
-  await course.update({ status: 'Pending', updated_at: new Date() });
+  await course.update({
+    status: 'Pending',
+    rejection_reason: null,
+    updated_at: new Date(),
+  });
   res.json({ message: 'Course submitted for approval.', course });
 });

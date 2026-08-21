@@ -1,7 +1,9 @@
+const { Op } = require('sequelize');
 const { Lesson, Course, Quiz } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { canEditCourse, getCourseEditMessage } = require('../rules/courseStatusRules');
+const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
 const fs = require('fs');
 const path = require('path');
 
@@ -18,14 +20,89 @@ const getLessons = async (courseId) => {
   return Lesson.findAll({ where: { course_id: courseId }, order: [['order_index', 'ASC']] });
 };
 
+const LESSON_TYPES = new Set(['regular', 'final']);
+const QUIZ_FILTERS = new Set(['with_quiz', 'without_quiz']);
+
+const buildLessonListWhere = async (courseId, filters = {}) => {
+  const where = { course_id: courseId };
+  const search = String(filters.search || '').trim();
+  const type = String(filters.type || '').trim();
+  const quiz = String(filters.quiz || '').trim();
+
+  if (search) {
+    where[Op.or] = [
+      { title: { [Op.iLike]: `%${search}%` } },
+      { video_url: { [Op.iLike]: `%${search}%` } },
+    ];
+  }
+
+  if (type) {
+    if (!LESSON_TYPES.has(type)) throw new AppError(400, 'Invalid lesson type filter.');
+    where.is_final = type === 'final';
+  }
+
+  if (quiz) {
+    if (!QUIZ_FILTERS.has(quiz)) throw new AppError(400, 'Invalid quiz availability filter.');
+    const courseLessonIds = await Lesson.findAll({
+      where: { course_id: courseId },
+      attributes: ['id'],
+      raw: true,
+    });
+    const quizRows = await Quiz.findAll({
+      where: { lesson_id: { [Op.in]: courseLessonIds.map((lesson) => lesson.id) } },
+      attributes: ['lesson_id'],
+      raw: true,
+    });
+    const lessonIdsWithQuiz = quizRows.map((row) => row.lesson_id);
+    where.id = quiz === 'with_quiz'
+      ? { [Op.in]: lessonIdsWithQuiz }
+      : { [Op.notIn]: lessonIdsWithQuiz };
+  }
+
+  return where;
+};
+
 exports.list = asyncHandler(async (req, res) => {
   await findOwnedCourse(req.params.courseId, req.user.id);
-  const lessons = await Lesson.findAll({
-    where: { course_id: req.params.courseId },
+  const pagination = parsePagination(req.query, { defaultLimit: 10, maxLimit: 50 });
+  const where = await buildLessonListWhere(req.params.courseId, req.query);
+  const { count, rows } = await Lesson.findAndCountAll({
+    where,
     include: [{ model: Quiz, attributes: ['id', 'title'] }],
     order: [['order_index', 'ASC']],
+    limit: pagination.limit,
+    offset: pagination.offset,
+    distinct: true,
   });
-  res.json({ lessons });
+
+  const [total, finalLesson, lastRegularOrder] = await Promise.all([
+    Lesson.count({ where: { course_id: req.params.courseId } }),
+    Lesson.findOne({
+      where: { course_id: req.params.courseId, is_final: true },
+      attributes: ['order_index'],
+      raw: true,
+    }),
+    Lesson.max('order_index', { where: { course_id: req.params.courseId, is_final: false } }),
+  ]);
+
+  const lessons = rows.map((lesson) => ({
+    ...lesson.toJSON(),
+    can_move_up: !lesson.is_final && lesson.order_index > 0,
+    can_move_down: !lesson.is_final && lesson.order_index < Number(lastRegularOrder),
+  }));
+
+  res.json({
+    lessons,
+    pagination: buildPaginationMeta({
+      page: pagination.page,
+      limit: pagination.limit,
+      totalItems: count,
+    }),
+    summary: {
+      total,
+      has_final: Boolean(finalLesson),
+    },
+  });
 });
 
 exports.create = asyncHandler(async (req, res) => {

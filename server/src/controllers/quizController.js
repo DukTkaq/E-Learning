@@ -1,7 +1,9 @@
+const { Op } = require('sequelize');
 const { Quiz, Question, Lesson, Course } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { canEditCourse, getCourseEditMessage } = require('../rules/courseStatusRules');
+const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
 
 const VALID_ANSWERS = ['A', 'B', 'C', 'D'];
 
@@ -23,8 +25,40 @@ exports.getQuiz = asyncHandler(async (req, res) => {
   const quiz = await Quiz.findOne({ where: { lesson_id: lessonId } });
   if (!quiz) return res.json({ quiz: null });
 
-  const questions = await Question.findAll({ where: { quiz_id: quiz.id }, order: [['created_at', 'ASC']] });
-  res.json({ quiz, questions });
+  const pagination = parsePagination(req.query, { defaultLimit: 10, maxLimit: 50 });
+  const search = String(req.query.search || '').trim();
+  const answer = String(req.query.answer || '').trim().toUpperCase();
+  const where = { quiz_id: quiz.id };
+
+  if (search) {
+    where[Op.or] = ['content', 'option_a', 'option_b', 'option_c', 'option_d']
+      .map((field) => ({ [field]: { [Op.iLike]: `%${search}%` } }));
+  }
+  if (answer) {
+    if (!VALID_ANSWERS.includes(answer)) throw new AppError(400, 'Invalid correct answer filter.');
+    where.correct_answer = answer;
+  }
+
+  const [{ count, rows: questions }, total] = await Promise.all([
+    Question.findAndCountAll({
+      where,
+      order: [['created_at', 'ASC'], ['id', 'ASC']],
+      limit: pagination.limit,
+      offset: pagination.offset,
+    }),
+    Question.count({ where: { quiz_id: quiz.id } }),
+  ]);
+
+  res.json({
+    quiz,
+    questions,
+    pagination: buildPaginationMeta({
+      page: pagination.page,
+      limit: pagination.limit,
+      totalItems: count,
+    }),
+    summary: { total },
+  });
 });
 
 exports.createQuiz = asyncHandler(async (req, res) => {
