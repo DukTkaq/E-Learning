@@ -1,154 +1,145 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Ticket, Plus, RefreshCw, X, Loader2, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Plus, RefreshCw, Ticket } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
-import { fetchVouchers, createVoucher, deleteVoucher } from '../../features/voucher/voucherApi';
-import { fetchInstructorCourses } from '../../features/courses/courseApi';
+import Pagination from '../../components/common/Pagination';
+import CreateVoucherModal from '../../components/vouchers/CreateVoucherModal';
+import VoucherFilters from '../../components/vouchers/VoucherFilters';
+import VoucherTable from '../../components/vouchers/VoucherTable';
+import { deleteVoucher, fetchVouchers } from '../../features/voucher/voucherApi';
+import { clampPage } from '../../utils/pagination';
 
-function CreateVoucherModal({ isOpen, onClose, onSuccess }) {
-  const [loading, setLoading] = useState(false);
-  const [courses, setCourses] = useState([]);
-  const [formData, setFormData] = useState({
-    code: '',
-    discount_percent: '',
-    course_id: ''
-  });
+const PAGE_LIMIT = 8;
+const EMPTY_PAGINATION = { page: 1, limit: PAGE_LIMIT, total_items: 0, total_pages: 0 };
 
-  useEffect(() => {
-    if (isOpen) {
-      setFormData({ code: '', discount_percent: '', course_id: '' });
-      fetchInstructorCourses().then(res => setCourses(res.data?.courses || [])).catch(console.error);
-    }
-  }, [isOpen]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (formData.discount_percent < 1 || formData.discount_percent > 100) {
-      return toast.error('Discount must be between 1 and 100');
-    }
-    
-    setLoading(true);
-    try {
-      await createVoucher(formData);
-      toast.success('Voucher created successfully!');
-      onSuccess();
-      onClose();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create voucher.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <Ticket className="text-primary w-6 h-6" /> Create New Voucher
-          </h2>
-          <button onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Voucher Code *</label>
-            <input
-              type="text"
-              required
-              className="w-full rounded-xl border border-gray-200 bg-slate-50 px-4 py-2.5 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all uppercase"
-              placeholder="e.g. SUMMER50"
-              value={formData.code}
-              onChange={e => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Discount Percentage (%) *</label>
-            <input
-              type="number"
-              required
-              min="1"
-              max="100"
-              className="w-full rounded-xl border border-gray-200 bg-slate-50 px-4 py-2.5 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-              placeholder="e.g. 20"
-              value={formData.discount_percent}
-              onChange={e => setFormData({ ...formData, discount_percent: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Specific Course (Optional)</label>
-            <select
-              className="w-full rounded-xl border border-gray-200 bg-slate-50 px-4 py-2.5 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-              value={formData.course_id}
-              onChange={e => setFormData({ ...formData, course_id: e.target.value })}
-            >
-              <option value="">-- Apply to all my courses --</option>
-              {courses.map(c => (
-                <option key={c.id} value={c.id}>{c.title}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <button type="button" onClick={onClose} className="rounded-xl px-5 py-2.5 font-medium text-slate-600 hover:bg-slate-100 transition-colors">
-              Cancel
-            </button>
-            <button type="submit" disabled={loading} className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 font-medium text-white hover:opacity-90 disabled:opacity-50 transition-colors">
-              {loading && <Loader2 size={18} className="animate-spin" />}
-              {loading ? 'Creating...' : 'Create Voucher'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+function parsePage(value) {
+  const page = Number.parseInt(value || '1', 10);
+  return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
 export default function VoucherManagementPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const listRef = useRef(null);
+
+  const searchFilter = searchParams.get('search') || '';
+  const scopeFilter = searchParams.get('scope') || '';
+  const discountFilter = searchParams.get('discount') || '';
+  const currentPage = parsePage(searchParams.get('page'));
+
   const [vouchers, setVouchers] = useState([]);
+  const [searchInput, setSearchInput] = useState(searchFilter);
+  const [pagination, setPagination] = useState(EMPTY_PAGINATION);
+  const [totalVouchers, setTotalVouchers] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const load = useCallback(async () => {
+  const loadVouchers = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetchVouchers();
-      setVouchers(response.data || []);
+      const response = await fetchVouchers({
+        search: searchFilter || undefined,
+        scope: scopeFilter || undefined,
+        discount: discountFilter || undefined,
+        page: currentPage,
+        limit: PAGE_LIMIT,
+      });
+      setVouchers(response.data.vouchers || []);
+      setPagination(response.data.pagination || EMPTY_PAGINATION);
+      setTotalVouchers(response.data.summary?.total || 0);
     } catch (error) {
-      toast.error('Could not load vouchers.');
+      toast.error(error.response?.data?.message || 'Could not load vouchers.');
+      setVouchers([]);
+      setPagination(EMPTY_PAGINATION);
+      setTotalVouchers(0);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, discountFilter, scopeFilter, searchFilter]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    loadVouchers();
+  }, [loadVouchers]);
 
-  const handleDelete = async (voucherId, code) => {
+  useEffect(() => {
+    setSearchInput(searchFilter);
+  }, [searchFilter]);
+
+  const validPage = clampPage(currentPage, pagination.total_pages);
+  const correctingOutOfRangePage = !loading && currentPage !== validPage;
+
+  useEffect(() => {
+    if (!correctingOutOfRangePage) return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (validPage === 1) nextParams.delete('page');
+    else nextParams.set('page', String(validPage));
+    setSearchParams(nextParams, { replace: true });
+  }, [correctingOutOfRangePage, searchParams, setSearchParams, validPage]);
+
+  const updateFilter = (key, value) => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (value) nextParams.set(key, value);
+    else nextParams.delete(key);
+    nextParams.delete('page');
+    setSearchParams(nextParams);
+  };
+
+  const applySearch = (event) => {
+    event.preventDefault();
+    updateFilter('search', searchInput.trim());
+  };
+
+  const clearFilters = () => {
+    setSearchInput('');
+    setSearchParams({});
+  };
+
+  const changePage = (page) => {
+    if (page < 1 || page > pagination.total_pages || page === currentPage) return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (page === 1) nextParams.delete('page');
+    else nextParams.set('page', String(page));
+    setSearchParams(nextParams);
+    listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const handleDelete = async (voucher) => {
     const result = await Swal.fire({
       title: 'Delete Voucher?',
-      text: `Are you sure you want to delete the voucher ${code}? This cannot be undone.`,
+      text: `Are you sure you want to delete ${voucher.code}? This cannot be undone.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
-      confirmButtonText: 'Yes, delete it!'
+      confirmButtonText: 'Yes, delete it!',
     });
+    if (!result.isConfirmed) return;
 
-    if (result.isConfirmed) {
-      try {
-        await deleteVoucher(voucherId);
-        toast.success('Voucher deleted successfully.');
-        load();
-      } catch (error) {
-        toast.error(error.response?.data?.message || 'Failed to delete voucher.');
-      }
+    setDeletingId(voucher.id);
+    try {
+      await deleteVoucher(voucher.id);
+      toast.success('Voucher deleted successfully.');
+      await loadVouchers();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete voucher.');
+    } finally {
+      setDeletingId('');
     }
   };
+
+  const handleCreated = () => {
+    const isFirstUnfilteredPage = currentPage === 1
+      && !searchFilter
+      && !scopeFilter
+      && !discountFilter;
+
+    if (isFirstUnfilteredPage) loadVouchers();
+    else setSearchParams({});
+  };
+
+  const hasAppliedFilters = Boolean(searchFilter || scopeFilter || discountFilter);
 
   return (
     <section>
@@ -159,77 +150,67 @@ export default function VoucherManagementPage() {
             <span className="text-sm font-bold uppercase tracking-wider">Marketing</span>
           </div>
           <h1 className="text-3xl font-bold text-slate-900">Voucher Management</h1>
-          <p className="mt-2 text-gray-500">Create discount coupons for your courses to boost sales.</p>
+          <p className="mt-2 text-gray-500">
+            {totalVouchers} voucher{totalVouchers === 1 ? '' : 's'} total
+            {hasAppliedFilters ? ` · ${pagination.total_items} matching` : ''}
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={load} className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 font-semibold text-gray-600 shadow-sm hover:text-primary transition-colors">
+          <button
+            type="button"
+            onClick={loadVouchers}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 font-semibold text-gray-600 shadow-sm transition-colors hover:text-primary disabled:opacity-60"
+          >
             <RefreshCw size={18} /> Refresh
           </button>
-          <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-semibold text-white shadow-sm hover:opacity-90 transition-opacity">
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+          >
             <Plus size={18} /> New Voucher
           </button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="rounded-2xl bg-white p-14 text-center text-gray-500 flex flex-col items-center gap-3">
-          <Loader2 className="animate-spin text-primary w-8 h-8" />
-          <p>Loading vouchers...</p>
-        </div>
-      ) : vouchers.length > 0 ? (
-        <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm text-gray-600">
-            <thead className="border-b border-gray-200 bg-gray-50 text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-6 py-4 font-semibold">Code</th>
-                <th className="px-6 py-4 font-semibold">Discount</th>
-                <th className="px-6 py-4 font-semibold">Target Course</th>
-                <th className="px-6 py-4 font-semibold">Created At</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {vouchers.map((v) => (
-                <tr key={v.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-primary">{v.code}</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {v.discount_percent}% OFF
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-slate-700">
-                    {v.Course ? v.Course.title : <span className="text-gray-400 italic">All Courses</span>}
-                  </td>
-                  <td className="px-6 py-4">{new Date(v.created_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => handleDelete(v.id, v.code)}
-                      className="p-2 text-slate-400 hover:bg-error/10 hover:text-error rounded-lg transition-colors"
-                      title="Delete Voucher"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-primary/25 bg-white p-14 text-center">
-          <Ticket className="mx-auto text-primary" size={38} />
-          <h2 className="mt-4 text-xl font-bold text-slate-800">No vouchers yet</h2>
-          <p className="mt-1 text-gray-500 mb-6">Create your first voucher to attract more students.</p>
-          <button onClick={() => setIsModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-2.5 font-semibold text-white shadow-sm hover:opacity-90 transition-opacity">
-            <Plus size={18} /> Create Voucher
-          </button>
-        </div>
-      )}
+      <div ref={listRef} className="scroll-mt-24">
+        <VoucherFilters
+          search={searchInput}
+          scope={scopeFilter}
+          discount={discountFilter}
+          disabled={loading}
+          onSearchChange={setSearchInput}
+          onSearch={applySearch}
+          onScopeChange={(value) => updateFilter('scope', value)}
+          onDiscountChange={(value) => updateFilter('discount', value)}
+          onClear={clearFilters}
+        />
 
-      <CreateVoucherModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onSuccess={load}
+        <VoucherTable
+          vouchers={vouchers}
+          loading={loading || correctingOutOfRangePage}
+          deletingId={deletingId}
+          hasFilters={hasAppliedFilters}
+          onDelete={handleDelete}
+          onCreate={() => setIsModalOpen(true)}
+        />
+
+        <div className="mt-6">
+          <Pagination
+            page={pagination.page}
+            totalPages={pagination.total_pages}
+            onPageChange={changePage}
+            disabled={loading}
+            ariaLabel="Voucher pagination"
+          />
+        </div>
+      </div>
+
+      <CreateVoucherModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={handleCreated}
       />
     </section>
   );

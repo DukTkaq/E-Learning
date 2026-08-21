@@ -1,9 +1,11 @@
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { Op } = require('sequelize');
 const { Course, Category, Lesson, Quiz, Question } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { canEditCourse, getCourseEditMessage } = require('../rules/courseStatusRules');
+const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
 
 const BUCKET_NAME = 'course-thumbnails';
 const PUBLIC_OBJECT_MARKER = `/storage/v1/object/public/${BUCKET_NAME}/`;
@@ -29,6 +31,7 @@ const COURSE_DETAIL_INCLUDE = [
     }],
   },
 ];
+const COURSE_STATUSES = new Set(['Draft', 'Pending', 'Approved', 'Rejected', 'Hidden']);
 const EDITABLE_FIELDS = ['title', 'description', 'thumbnail', 'price', 'category_id'];
 const EXTENSION_BY_MIME_TYPE = {
   'image/jpeg': '.jpg',
@@ -174,6 +177,61 @@ const findOwnedCourse = async (courseId, instructorId, { withCurriculum = false 
   return course;
 };
 
+const parseCategoryId = (value) => {
+  if (!value) return null;
+  const categoryId = Number(value);
+  if (!Number.isInteger(categoryId) || categoryId <= 0) {
+    throw new AppError(400, 'Category must be a positive integer.');
+  }
+  return categoryId;
+};
+
+const listOwnedCourses = async (instructorId, filters = {}) => {
+  const pagination = parsePagination(filters, { defaultLimit: 8, maxLimit: 50 });
+  const search = String(filters.search || '').trim();
+  const status = String(filters.status || '').trim();
+  const categoryId = parseCategoryId(filters.category_id);
+  const where = { instructor_id: instructorId };
+
+  if (status) {
+    if (!COURSE_STATUSES.has(status)) throw new AppError(400, 'Invalid course status filter.');
+    where.status = status;
+  }
+  if (categoryId) where.category_id = categoryId;
+  if (search) {
+    where[Op.or] = [
+      { title: { [Op.iLike]: `%${search}%` } },
+      { description: { [Op.iLike]: `%${search}%` } },
+    ];
+  }
+
+  const [{ count, rows: courses }, totalCourses, hiddenCourses] = await Promise.all([
+    Course.findAndCountAll({
+      where,
+      include: COURSE_INCLUDE,
+      order: [['updated_at', 'DESC'], ['created_at', 'DESC'], ['id', 'DESC']],
+      limit: pagination.limit,
+      offset: pagination.offset,
+      distinct: true,
+    }),
+    Course.count({ where: { instructor_id: instructorId } }),
+    Course.count({ where: { instructor_id: instructorId, status: 'Hidden' } }),
+  ]);
+
+  return {
+    courses,
+    pagination: buildPaginationMeta({
+      page: pagination.page,
+      limit: pagination.limit,
+      totalItems: count,
+    }),
+    summary: {
+      active: totalCourses - hiddenCourses,
+      total: totalCourses,
+    },
+  };
+};
+
 const createOwnedCourse = async (instructorId, payload) => {
   const data = await validateCoursePayload(payload);
   const now = new Date();
@@ -202,12 +260,7 @@ const updateOwnedCourse = async (courseId, instructorId, payload) => {
 };
 
 exports.list = asyncHandler(async (req, res) => {
-  const courses = await Course.findAll({
-    where: { instructor_id: req.user.id },
-    include: COURSE_INCLUDE,
-    order: [['updated_at', 'DESC'], ['created_at', 'DESC']],
-  });
-  res.json({ courses });
+  res.json(await listOwnedCourses(req.user.id, req.query));
 });
 
 exports.get = asyncHandler(async (req, res) => {

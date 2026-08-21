@@ -1,9 +1,73 @@
+const { Op } = require('sequelize');
 const { User, Role } = require('../models');
+const AppError = require('../utils/AppError');
+const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
+
+const USER_STATUSES = new Set(['Active', 'Banned', 'Pending', 'Rejected']);
+const USER_ROLES = new Set(['Admin', 'Instructor', 'Student']);
+
+const buildUserWhere = async (filters = {}) => {
+  const where = {};
+  const search = String(filters.search || '').trim();
+  const status = String(filters.status || '').trim();
+  const role = String(filters.role || '').trim();
+
+  if (search) {
+    where[Op.or] = [
+      { name: { [Op.iLike]: `%${search}%` } },
+      { email: { [Op.iLike]: `%${search}%` } },
+    ];
+  }
+  if (status) {
+    if (!USER_STATUSES.has(status)) throw new AppError(400, 'Invalid user status filter.');
+    where.status = status;
+  }
+  if (role) {
+    if (!USER_ROLES.has(role)) throw new AppError(400, 'Invalid user role filter.');
+    const roleRecord = await Role.findOne({ where: { role_name: role }, attributes: ['id'] });
+    where.role_id = roleRecord?.id ?? -1;
+  }
+
+  return where;
+};
+
+const buildInstructorRequestWhere = (studentRoleId, filters = {}) => {
+  const where = { status: 'Pending', role_id: studentRoleId };
+  const search = String(filters.search || '').trim();
+  const profile = String(filters.profile || '').trim();
+  const filled = (field) => ({ [field]: { [Op.not]: null, [Op.ne]: '' } });
+
+  if (search) {
+    where[Op.or] = [
+      { name: { [Op.iLike]: `%${search}%` } },
+      { email: { [Op.iLike]: `%${search}%` } },
+      { expertise: { [Op.iLike]: `%${search}%` } },
+    ];
+  }
+  if (profile === 'complete') {
+    where[Op.and] = [filled('expertise'), filled('bio'), filled('portfolio_url')];
+  } else if (profile === 'incomplete') {
+    where[Op.and] = [{
+      [Op.or]: [
+        { expertise: { [Op.or]: [{ [Op.is]: null }, { [Op.eq]: '' }] } },
+        { bio: { [Op.or]: [{ [Op.is]: null }, { [Op.eq]: '' }] } },
+        { portfolio_url: { [Op.or]: [{ [Op.is]: null }, { [Op.eq]: '' }] } },
+      ],
+    }];
+  } else if (profile) {
+    throw new AppError(400, 'Invalid application profile filter.');
+  }
+
+  return where;
+};
 
 // [GET] /api/admin/users
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.findAll({
+    const pagination = parsePagination(req.query, { defaultLimit: 8, maxLimit: 50 });
+    const where = await buildUserWhere(req.query);
+    const { count, rows: users } = await User.findAndCountAll({
+      where,
       attributes: ['id', 'name', 'email', 'avatar_url', 'status', 'created_at'],
       include: [
         {
@@ -11,13 +75,26 @@ exports.getAllUsers = async (req, res) => {
           attributes: ['role_name']
         }
       ],
-      order: [['created_at', 'DESC']]
+      order: [['created_at', 'DESC'], ['id', 'DESC']],
+      limit: pagination.limit,
+      offset: pagination.offset,
+      distinct: true,
     });
 
-    res.status(200).json(users);
+    const total = await User.count();
+    res.status(200).json({
+      users,
+      pagination: buildPaginationMeta({
+        page: pagination.page,
+        limit: pagination.limit,
+        totalItems: count,
+      }),
+      summary: { total },
+    });
   } catch (error) {
+    if (error instanceof AppError) return res.status(error.statusCode).json({ message: error.message });
     console.error('Error fetching users:', error);
-    res.status(500).json({ message: 'Internal server error while fetching users' });
+    return res.status(500).json({ message: 'Internal server error while fetching users' });
   }
 };
 
@@ -149,19 +226,29 @@ exports.getDashboardMetrics = async (req, res) => {
 exports.getInstructorRequests = async (req, res) => {
   try {
     const studentRole = await Role.findOne({ where: { role_name: 'Student' } });
-    const users = await User.findAll({
-      where: {
-        status: 'Pending',
-        role_id: studentRole?.id || 3
-      },
+    const pagination = parsePagination(req.query, { defaultLimit: 8, maxLimit: 50 });
+    const where = buildInstructorRequestWhere(studentRole?.id || 3, req.query);
+    const { count, rows: users } = await User.findAndCountAll({
+      where,
       attributes: ['id', 'name', 'email', 'avatar_url', 'status', 'created_at', 'expertise', 'bio', 'portfolio_url'],
-      order: [['created_at', 'ASC']]
+      order: [['created_at', 'ASC'], ['id', 'ASC']],
+      limit: pagination.limit,
+      offset: pagination.offset,
     });
 
-    res.status(200).json(users);
+    res.status(200).json({
+      requests: users,
+      pagination: buildPaginationMeta({
+        page: pagination.page,
+        limit: pagination.limit,
+        totalItems: count,
+      }),
+      summary: { total: count },
+    });
   } catch (error) {
+    if (error instanceof AppError) return res.status(error.statusCode).json({ message: error.message });
     console.error('Error fetching instructor requests:', error);
-    res.status(500).json({ message: 'Internal server error while fetching requests' });
+    return res.status(500).json({ message: 'Internal server error while fetching requests' });
   }
 };
 
