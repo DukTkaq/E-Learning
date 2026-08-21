@@ -105,8 +105,16 @@ exports.update = asyncHandler(async (req, res) => {
       if (existingFinal) {
         await existingFinal.update({ is_final: false });
       }
-      const maxOrder = Math.max(...lessons.map((l) => l.order_index));
-      lesson.order_index = maxOrder + 1;
+      const nonFinal = lessons
+        .filter((l) => l.id !== lesson.id)
+        .sort((a, b) => a.order_index - b.order_index);
+      for (let i = 0; i < nonFinal.length; i++) {
+        if (nonFinal[i].order_index !== i) {
+          nonFinal[i].order_index = i;
+          await nonFinal[i].save();
+        }
+      }
+      lesson.order_index = nonFinal.length;
       lesson.is_final = true;
     } else if (!newIsFinal && lesson.is_final) {
       lesson.is_final = false;
