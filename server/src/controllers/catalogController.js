@@ -6,6 +6,8 @@ const {
   Course,
   Enrollment,
   Lesson,
+  Quiz,
+  Question,
   Review,
   User,
 } = require('../models');
@@ -111,15 +113,41 @@ exports.mine = asyncHandler(async (req, res) => {
 exports.detail = asyncHandler(async (req, res) => {
   if (!UUID.test(String(req.params.courseId))) throw new AppError(400, 'Course ID must be a valid UUID.');
   const course = await Course.findOne({
-    where: { id: req.params.courseId, status: 'Approved' },
+    where: { 
+      id: req.params.courseId, 
+      ...(req.user?.role === 'Admin' ? {} : { status: 'Approved' })
+    },
     include: [
       ...COURSE_INCLUDE,
-      { model: Lesson, attributes: ['id', 'title', 'order_index'], required: false },
+      req.user?.role === 'Admin'
+        ? {
+            model: Lesson,
+            attributes: ['id', 'title', 'video_url', 'order_index', 'is_final', 'created_at', 'updated_at'],
+            required: false,
+            include: [{
+              model: Quiz,
+              attributes: ['id', 'title', 'passing_score', 'max_attempts', 'created_at', 'updated_at'],
+              required: false,
+              include: [{
+                model: Question,
+                attributes: [
+                  'id', 'content', 'option_a', 'option_b', 'option_c', 'option_d',
+                  'correct_answer', 'created_at', 'updated_at',
+                ],
+                required: false,
+              }],
+            }],
+          }
+        : { model: Lesson, attributes: ['id', 'title', 'order_index'], required: false },
       { model: Review, required: false, include: [{ model: User, attributes: ['id', 'name', 'avatar_url'] }] },
     ],
-    order: [[Lesson, 'order_index', 'ASC'], [Review, 'created_at', 'DESC']],
+    order: [
+      [Lesson, 'order_index', 'ASC'],
+      ...(req.user?.role === 'Admin' ? [[Lesson, Quiz, Question, 'created_at', 'ASC']] : []),
+      [Review, 'created_at', 'DESC']
+    ],
   });
-  if (!course) throw new AppError(404, 'Approved course not found.');
+  if (!course) throw new AppError(404, 'Course not found.');
 
   let inCart = false;
   let enrolled = false;
