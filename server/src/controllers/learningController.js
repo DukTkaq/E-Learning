@@ -3,13 +3,16 @@ const {
   Review, User, sequelize,
 } = require('../models');
 const { randomUUID } = require('crypto');
+const path = require('path');
 const PDFDocument = require('pdfkit');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { canEnrolledStudentLearn } = require('../rules/courseStatusRules');
 
-const CERTIFICATE_FONT_REGULAR = require.resolve('@fontsource/noto-sans/files/noto-sans-vietnamese-400-normal.woff');
-const CERTIFICATE_FONT_BOLD = require.resolve('@fontsource/noto-sans/files/noto-sans-vietnamese-700-normal.woff');
+const CERTIFICATE_FONT_PATHS = Object.freeze({
+  regular: path.join(__dirname, '../assets/fonts/NotoSans-Regular.ttf'),
+  bold: path.join(__dirname, '../assets/fonts/NotoSans-Bold.ttf'),
+});
 
 const normalizeAnswer = (value) => String(value ?? '').trim().toUpperCase();
 
@@ -176,8 +179,8 @@ const buildCertificatePdf = ({ studentName, courseTitle, certificateId, issuedDa
   document.on('data', (chunk) => chunks.push(chunk));
   document.on('end', () => resolve(Buffer.concat(chunks)));
   document.on('error', reject);
-  document.registerFont('NotoSans', CERTIFICATE_FONT_REGULAR);
-  document.registerFont('NotoSansBold', CERTIFICATE_FONT_BOLD);
+  document.registerFont('NotoSans', CERTIFICATE_FONT_PATHS.regular);
+  document.registerFont('NotoSansBold', CERTIFICATE_FONT_PATHS.bold);
   document.rect(24, 24, 793, 547).lineWidth(3).stroke('#4f46e5');
   document.rect(34, 34, 773, 527).lineWidth(1).stroke('#0ea5e9');
   document.moveDown(2);
@@ -460,6 +463,7 @@ exports.createReview = asyncHandler(async (req, res) => {
 exports.__test = {
   buildCertificatePdf,
   calculateQuizResult,
+  certificateFontPaths: CERTIFICATE_FONT_PATHS,
   getQuizState,
   isCourseComplete,
   recordQuizAttempt,

@@ -1,15 +1,40 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fontkit = require('fontkit');
 
 const {
   buildCertificatePdf,
   calculateQuizResult,
+  certificateFontPaths,
   getQuizState,
   isCourseComplete,
   recordQuizAttempt,
   recordLessonWatched,
   validateReviewInput,
 } = require('../src/controllers/learningController').__test;
+
+test('certificate fonts cover ASCII and the complete Vietnamese alphabet', () => {
+  const sample = [
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:/-',
+    'ĂÂĐÊÔƠƯăâđêôơư',
+    'ÀÁẢÃẠàáảãạẰẮẲẴẶằắẳẵặẦẤẨẪẬầấẩẫậ',
+    'ÈÉẺẼẸèéẻẽẹỀẾỂỄỆềếểễệÌÍỈĨỊìíỉĩị',
+    'ÒÓỎÕỌòóỏõọỒỐỔỖỘồốổỗộỜỚỞỠỢờớởỡợ',
+    'ÙÚỦŨỤùúủũụỪỨỬỮỰừứửữựỲÝỶỸỴỳýỷỹỵ',
+  ].join('');
+  assert.ok(certificateFontPaths, 'Certificate font paths must be exposed for glyph verification');
+
+  for (const [style, fontPath] of Object.entries(certificateFontPaths)) {
+    const font = fontkit.openSync(fontPath);
+    for (const character of new Set([...sample.replace(/\s/g, '')])) {
+      assert.equal(
+        font.hasGlyphForCodePoint(character.codePointAt(0)),
+        true,
+        `${style} certificate font is missing glyph ${character}`,
+      );
+    }
+  }
+});
 
 test('buildCertificatePdf creates a PDF while preserving Vietnamese input', async () => {
   const pdf = await buildCertificatePdf({
