@@ -1,4 +1,7 @@
-const { Category, sequelize } = require('../models');
+const { Op } = require('sequelize');
+const { Category, Course, sequelize } = require('../models');
+const AppError = require('../utils/AppError');
+const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
 
 const validateCategoryName = (name) => {
   if (!name || name.trim() === '') {
@@ -53,13 +56,57 @@ exports.createCategory = async (req, res) => {
 // [GET] /api/categories
 exports.getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.findAll({
-      order: [['id', 'ASC']]
+    const shouldPaginate = ['true', '1'].includes(String(req.query.paginate || '').toLowerCase())
+      || Boolean(req.query.page || req.query.limit || req.query.search || req.query.usage);
+
+    if (!shouldPaginate) {
+      const categories = await Category.findAll({ order: [['id', 'ASC']] });
+      return res.json({ categories });
+    }
+
+    const pagination = parsePagination(req.query, { defaultLimit: 8, maxLimit: 50 });
+    const search = String(req.query.search || '').trim();
+    const usage = String(req.query.usage || '').trim();
+    const where = {};
+
+    if (search) {
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { description: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+    if (usage) {
+      if (!['in_use', 'empty'].includes(usage)) throw new AppError(400, 'Invalid category usage filter.');
+      const usedRows = await Course.findAll({
+        attributes: ['category_id'],
+        group: ['category_id'],
+        raw: true,
+      });
+      const usedIds = usedRows.map((row) => row.category_id);
+      where.id = usage === 'in_use' ? { [Op.in]: usedIds } : { [Op.notIn]: usedIds };
+    }
+
+    const { count, rows: categories } = await Category.findAndCountAll({
+      where,
+      order: [['name', 'ASC'], ['id', 'ASC']],
+      limit: pagination.limit,
+      offset: pagination.offset,
     });
-    res.json({ categories });
+
+    const total = await Category.count();
+    return res.json({
+      categories,
+      pagination: buildPaginationMeta({
+        page: pagination.page,
+        limit: pagination.limit,
+        totalItems: count,
+      }),
+      summary: { total },
+    });
   } catch (error) {
+    if (error instanceof AppError) return res.status(error.statusCode).json({ message: error.message });
     console.error('Error fetching categories:', error);
-    res.status(500).json({ message: 'Internal server error while fetching categories' });
+    return res.status(500).json({ message: 'Internal server error while fetching categories' });
   }
 };
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, BookOpen, Home, LogOut, Menu, MessageSquare, X, Ticket, User } from 'lucide-react';
+import { BarChart3, BookOpen, LogOut, Menu, MessageSquare, X, Ticket, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const NAV_ITEMS = [
@@ -39,10 +39,6 @@ export default function InstructorLayout({ children }) {
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          <Link to="/instructor/courses" className="group flex items-center gap-3 rounded-xl px-3 py-3 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">
-            <Home size={20} />
-            {expanded && <span className="font-medium">Home</span>}
-          </Link>
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = location.pathname.startsWith(item.path);

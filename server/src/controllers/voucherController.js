@@ -1,25 +1,75 @@
 const { Coupon, Course } = require('../models');
+const { Op } = require('sequelize');
+const AppError = require('../utils/AppError');
+const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
+
+const DISCOUNT_RANGES = {
+  low: [1, 20],
+  medium: [21, 50],
+  high: [51, 100],
+};
+
+const buildVoucherWhere = (instructorId, filters) => {
+  const where = { instructor_id: instructorId };
+  const search = String(filters.search || '').trim();
+  const scope = String(filters.scope || '').trim();
+  const discount = String(filters.discount || '').trim();
+
+  if (scope === 'all_courses') where.course_id = { [Op.is]: null };
+  else if (scope === 'specific_course') where.course_id = { [Op.not]: null };
+  else if (scope) throw new AppError(400, 'Invalid voucher scope filter.');
+
+  if (discount) {
+    const range = DISCOUNT_RANGES[discount];
+    if (!range) throw new AppError(400, 'Invalid discount filter.');
+    where.discount_percent = { [Op.between]: range };
+  }
+
+  if (search) {
+    where[Op.or] = [
+      { code: { [Op.iLike]: `%${search}%` } },
+      { '$Course.title$': { [Op.iLike]: `%${search}%` } },
+    ];
+  }
+
+  return where;
+};
+
+exports.__test = { buildVoucherWhere };
 
 // [GET] /api/instructor/vouchers
 exports.getVouchers = async (req, res) => {
   try {
     const instructorId = req.user.id;
-    
-    const vouchers = await Coupon.findAll({
-      where: { instructor_id: instructorId },
-      include: [
-        {
-          model: Course,
-          attributes: ['id', 'title'] // just need course title for display
-        }
-      ],
-      order: [['created_at', 'DESC']]
-    });
+    const pagination = parsePagination(req.query, { defaultLimit: 8, maxLimit: 50 });
+    const where = buildVoucherWhere(instructorId, req.query);
+    const include = [{ model: Course, attributes: ['id', 'title'], required: false }];
 
-    res.status(200).json(vouchers);
+    const [{ count, rows: vouchers }, total] = await Promise.all([
+      Coupon.findAndCountAll({
+        where,
+        include,
+        order: [['created_at', 'DESC'], ['id', 'DESC']],
+        limit: pagination.limit,
+        offset: pagination.offset,
+        distinct: true,
+      }),
+      Coupon.count({ where: { instructor_id: instructorId } }),
+    ]);
+
+    res.status(200).json({
+      vouchers,
+      pagination: buildPaginationMeta({
+        page: pagination.page,
+        limit: pagination.limit,
+        totalItems: count,
+      }),
+      summary: { total },
+    });
   } catch (error) {
+    if (error instanceof AppError) return res.status(error.statusCode).json({ message: error.message });
     console.error('Error fetching vouchers:', error);
-    res.status(500).json({ message: 'Internal server error while fetching vouchers' });
+    return res.status(500).json({ message: 'Internal server error while fetching vouchers' });
   }
 };
 

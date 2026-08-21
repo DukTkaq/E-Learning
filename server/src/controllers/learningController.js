@@ -6,6 +6,7 @@ const { randomUUID } = require('crypto');
 const PDFDocument = require('pdfkit');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { canEnrolledStudentLearn } = require('../rules/courseStatusRules');
 
 const CERTIFICATE_FONT_REGULAR = require.resolve('@fontsource/noto-sans/files/noto-sans-vietnamese-400-normal.woff');
 const CERTIFICATE_FONT_BOLD = require.resolve('@fontsource/noto-sans/files/noto-sans-vietnamese-700-normal.woff');
