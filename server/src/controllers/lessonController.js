@@ -20,6 +20,7 @@ const getLessons = async (courseId) => {
   return Lesson.findAll({ where: { course_id: courseId }, order: [['order_index', 'ASC']] });
 };
 
+const MAX_LESSONS_PER_COURSE = 30;
 const LESSON_TYPES = new Set(['regular', 'final']);
 const QUIZ_FILTERS = new Set(['with_quiz', 'without_quiz']);
 
@@ -115,6 +116,9 @@ exports.create = asyncHandler(async (req, res) => {
   const videoUrl = `/uploads/videos/${req.file.filename}`;
 
   const lessons = await getLessons(req.params.courseId);
+  if (lessons.length >= MAX_LESSONS_PER_COURSE) {
+    throw new AppError(400, `A course can only have up to ${MAX_LESSONS_PER_COURSE} lessons.`);
+  }
   const newIsFinal = is_final === true || is_final === 'true';
 
   if (newIsFinal) {
