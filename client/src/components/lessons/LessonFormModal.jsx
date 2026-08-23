@@ -8,6 +8,7 @@ const ALLOWED_EXTENSIONS = /\.(mp4|mov|avi|mkv|webm)$/i;
 export default function LessonFormModal({ lesson, submitting, onClose, onSubmit }) {
   const [title, setTitle] = useState('');
   const [isFinal, setIsFinal] = useState(false);
+  const [canSkip, setCanSkip] = useState(false);
   const [videoFile, setVideoFile] = useState(null);
   const [videoPreview, setVideoPreview] = useState('');
   const [fileError, setFileError] = useState('');
@@ -15,6 +16,7 @@ export default function LessonFormModal({ lesson, submitting, onClose, onSubmit 
   useEffect(() => {
     setTitle(lesson?.title || '');
     setIsFinal(lesson?.is_final || false);
+    setCanSkip(lesson?.can_skip || false);
     setVideoFile(null);
     setVideoPreview(lesson?.video_url ? resolveAssetUrl(lesson.video_url) : '');
     setFileError('');
@@ -45,6 +47,7 @@ export default function LessonFormModal({ lesson, submitting, onClose, onSubmit 
     const formData = new FormData();
     formData.append('title', title);
     formData.append('is_final', isFinal);
+    formData.append('can_skip', canSkip);
     if (videoFile) formData.append('video', videoFile);
     onSubmit(formData);
   };
@@ -94,6 +97,14 @@ export default function LessonFormModal({ lesson, submitting, onClose, onSubmit 
             <div>
               <span className="text-sm font-semibold text-slate-700">Mark as final lesson</span>
               <p className="text-xs text-gray-500">The final lesson is always placed at the end of the list.</p>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 cursor-pointer hover:bg-slate-50 transition">
+            <input type="checkbox" checked={canSkip} onChange={(e) => setCanSkip(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+            <div>
+              <span className="text-sm font-semibold text-slate-700">Allow skipping this video</span>
+              <p className="text-xs text-gray-500">Students can seek forward without watching from the start.</p>
             </div>
           </label>
 
