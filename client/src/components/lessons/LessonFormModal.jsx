@@ -104,7 +104,7 @@ export default function LessonFormModal({ lesson, submitting, onClose, onSubmit 
             <input type="checkbox" checked={canSkip} onChange={(e) => setCanSkip(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
             <div>
               <span className="text-sm font-semibold text-slate-700">Allow skipping this video</span>
-              <p className="text-xs text-gray-500">Students can seek forward without watching from the start.</p>
+              <p className="text-xs text-gray-500">Students can skip forward without watching from the start.</p>
             </div>
           </label>
 
