@@ -13,6 +13,7 @@ const {
   User,
   sequelize,
 } = require('../src/models');
+const { getTrustedVideoDurationSeconds } = require('../src/utils/videoMetadata');
 
 const baseUrl = process.env.E2E_BASE_URL || 'http://127.0.0.1:3000/api';
 const runId = randomUUID();
@@ -188,22 +189,44 @@ const run = async () => {
           expectedStatus: 201,
         });
         assert.equal(failed.body.attempt.passed, false);
-        assert.equal(failed.body.attempt.attempt_number, attempt);
+        assert.equal(failed.body.attempt.failed_attempts, attempt);
       }
 
       const locked = await request(`/learning/lessons/${lesson.id}/quiz`, { token });
       assert.equal(locked.body.quiz.lock_reason, 'REWATCH_REQUIRED');
-      assert.equal(locked.body.quiz.remaining_attempts, 0);
+      assert.equal(locked.body.quiz.remaining_failed_attempts, 0);
       await request(`/learning/quizzes/${quiz.id}/attempts`, {
         token,
         method: 'POST',
         body: JSON.stringify({ answers: answerMap(questions, true) }),
         expectedStatus: 409,
       });
+      await request(`/learning/lessons/${lesson.id}/complete`, {
+        token,
+        method: 'POST',
+        expectedStatus: 409,
+      });
 
+      const trustedDuration = await getTrustedVideoDurationSeconds(lesson.video_url);
+      await testEnrollment.reload();
+      const seededRewatchState = structuredClone(testEnrollment.learning_state);
+      const simulatedRewatchStart = new Date(
+        Date.now() - (Math.ceil(trustedDuration) * 1000),
+      ).toISOString();
+      seededRewatchState.lessons[String(lesson.id)].rewatch_started_at = simulatedRewatchStart;
+      seededRewatchState.lessons[String(lesson.id)].playback_saved_at = simulatedRewatchStart;
+      await testEnrollment.update({ learning_state: seededRewatchState, updated_at: new Date() });
+      await request(`/learning/lessons/${lesson.id}/session`, {
+        token,
+        method: 'PATCH',
+        body: JSON.stringify({
+          video_position_seconds: trustedDuration,
+          furthest_watched_seconds: trustedDuration,
+        }),
+      });
       const rewatched = await request(`/learning/lessons/${lesson.id}/complete`, { token, method: 'POST' });
       assert.equal(rewatched.body.quiz.watch_cycle, 2);
-      assert.equal(rewatched.body.quiz.remaining_attempts, quiz.max_attempts);
+      assert.equal(rewatched.body.quiz.remaining_failed_attempts, quiz.max_attempts);
     }
 
     const passed = await request(`/learning/quizzes/${quiz.id}/attempts`, {

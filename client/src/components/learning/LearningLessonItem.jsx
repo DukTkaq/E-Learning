@@ -1,11 +1,9 @@
 import { CheckCircle2, LockKeyhole, PlayCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getQuizStatusLabel } from '../../utils/quizPresentation';
 
 const lessonStatus = (lesson) => {
-  if (lesson.quiz?.passed) return 'Passed';
-  if (lesson.quiz?.lock_reason === 'REWATCH_REQUIRED') return 'Rewatch required';
-  if (lesson.quiz?.lock_reason === 'WATCH_REQUIRED') return 'Watch video to unlock quiz';
-  if (lesson.quiz) return `${lesson.quiz.remaining_attempts} attempts remaining`;
+  if (lesson.quiz) return getQuizStatusLabel(lesson.quiz);
   return null;
 };
 

@@ -7,6 +7,7 @@ const router = express.Router();
 router.use(verifyToken, authorizeRoles('Student'));
 router.get('/courses/:courseId', controller.courseDetail);
 router.get('/lessons/:lessonId', controller.lessonDetail);
+router.patch('/lessons/:lessonId/session', controller.saveLessonSession);
 router.post('/lessons/:lessonId/complete', controller.completeLesson);
 router.get('/lessons/:lessonId/quiz', controller.getQuiz);
 router.post('/quizzes/:quizId/attempts', controller.submitQuiz);
