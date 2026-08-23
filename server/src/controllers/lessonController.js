@@ -109,11 +109,12 @@ exports.list = asyncHandler(async (req, res) => {
 exports.create = asyncHandler(async (req, res) => {
   await findOwnedCourse(req.params.courseId, req.user.id, true);
 
-  const { title, is_final } = req.body;
+  const { title, is_final, can_skip } = req.body;
   if (!title || !title.trim()) throw new AppError(400, 'Lesson title is required.');
   if (!req.file) throw new AppError(400, 'Video file is required.');
 
   const videoUrl = `/uploads/videos/${req.file.filename}`;
+  const newCanSkip = can_skip === true || can_skip === 'true';
 
   const lessons = await getLessons(req.params.courseId);
   if (lessons.length >= MAX_LESSONS_PER_COURSE) {
@@ -150,6 +151,7 @@ exports.create = asyncHandler(async (req, res) => {
     course_id: req.params.courseId,
     order_index: orderIndex,
     is_final: newIsFinal,
+    can_skip: newCanSkip,
     created_at: new Date(),
     updated_at: new Date(),
   });
@@ -163,10 +165,14 @@ exports.update = asyncHandler(async (req, res) => {
   const lesson = await Lesson.findOne({ where: { id: req.params.id, course_id: req.params.courseId } });
   if (!lesson) throw new AppError(404, 'Lesson not found.');
 
-  const { title, is_final } = req.body;
+  const { title, is_final, can_skip } = req.body;
   if (title !== undefined) {
     if (!title.trim()) throw new AppError(400, 'Lesson title cannot be empty.');
     lesson.title = title.trim();
+  }
+
+  if (can_skip !== undefined) {
+    lesson.can_skip = can_skip === true || can_skip === 'true';
   }
 
   if (req.file) {
