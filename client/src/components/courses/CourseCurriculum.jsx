@@ -112,7 +112,7 @@ function LessonCard({ lesson, index }) {
               </div>
               <p className="text-sm text-slate-500">
                 Passing score: <span className="font-semibold text-slate-700">{quiz.passing_score}%</span>
-                {' · '}Max attempts: <span className="font-semibold text-slate-700">{quiz.max_attempts}</span>
+                {' · '}Max failed attempts: <span className="font-semibold text-slate-700">{quiz.max_attempts}</span>
               </p>
             </div>
             <QuestionList questions={quiz.Questions} />

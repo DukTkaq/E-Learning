@@ -75,7 +75,7 @@ exports.createQuiz = asyncHandler(async (req, res) => {
   if (isNaN(score) || score < 1 || score > 100) throw new AppError(400, 'Passing score must be between 1 and 100.');
 
   const attempts = parseInt(max_attempts, 10);
-  if (isNaN(attempts) || attempts < 1) throw new AppError(400, 'Max attempts must be at least 1.');
+  if (isNaN(attempts) || attempts < 1) throw new AppError(400, 'Max failed attempts must be at least 1.');
 
   const quiz = await Quiz.create({
     title: title.trim(),
@@ -111,7 +111,7 @@ exports.updateQuiz = asyncHandler(async (req, res) => {
 
   if (max_attempts !== undefined) {
     const attempts = parseInt(max_attempts, 10);
-    if (isNaN(attempts) || attempts < 1) throw new AppError(400, 'Max attempts must be at least 1.');
+    if (isNaN(attempts) || attempts < 1) throw new AppError(400, 'Max failed attempts must be at least 1.');
     quiz.max_attempts = attempts;
   }
 

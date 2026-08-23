@@ -3,17 +3,18 @@ const finiteNonNegative = (value, fallback = 0) => {
   return Number.isFinite(number) && number >= 0 ? number : fallback;
 };
 
-export const isForwardSeekLocked = ({ completedAt, quizLockReason } = {}) => (
-  !completedAt || quizLockReason === 'REWATCH_REQUIRED'
+export const isForwardSeekLocked = ({ completedAt, quizLockReason, canSkip = false } = {}) => (
+  !canSkip && (!completedAt || quizLockReason === 'REWATCH_REQUIRED')
 );
 
 export const createVideoSeekGuard = ({
   unlocked = false,
+  initialPositionSeconds = 0,
   seekToleranceSeconds = 0.1,
   jumpToleranceSeconds = 0.35,
   completionToleranceSeconds = 1,
 } = {}) => {
-  let furthestWatched = 0;
+  let furthestWatched = finiteNonNegative(initialPositionSeconds);
   let lastObservedAt = null;
   let wasPlaying = false;
   let previousPlaybackRate = 1;

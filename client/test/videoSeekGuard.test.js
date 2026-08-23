@@ -77,3 +77,32 @@ test('completed lessons allow seeking unless a full rewatch is required', () => 
   assert.equal(guard.observe({ currentTime: 90, nowMs: 0, seeking: true }).blocked, false);
   assert.equal(guard.canComplete(100), true);
 });
+
+test('a skippable lesson allows seeking even when a full rewatch is required', () => {
+  assert.equal(isForwardSeekLocked({
+    completedAt: null,
+    quizLockReason: 'WATCH_REQUIRED',
+    canSkip: true,
+  }), false);
+  assert.equal(isForwardSeekLocked({
+    completedAt: null,
+    quizLockReason: 'WATCH_REQUIRED',
+    canSkip: false,
+  }), true);
+  assert.equal(isForwardSeekLocked({
+    completedAt: null,
+    quizLockReason: 'REWATCH_REQUIRED',
+    canSkip: true,
+  }), false);
+});
+
+test('a resumed lesson starts from the saved furthest watched position', () => {
+  const guard = newGuard({ initialPositionSeconds: 300 });
+
+  assert.equal(guard.furthestWatched, 300);
+  assert.equal(guard.observe({ currentTime: 300, nowMs: 0, seeking: true }).blocked, false);
+  assert.deepEqual(
+    guard.observe({ currentTime: 360, nowMs: 100, seeking: true }),
+    { blocked: true, targetTime: 300, furthestWatched: 300 },
+  );
+});

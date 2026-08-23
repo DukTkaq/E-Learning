@@ -13,6 +13,8 @@ const {
   isLearningComplete,
   lessonIsComplete,
 } = require('../utils/learningProgress');
+const { mergeLessonSession } = require('../utils/learningSession');
+const { getTrustedVideoDurationSeconds } = require('../utils/videoMetadata');
 const { canEnrolledStudentLearn } = require('../rules/courseStatusRules');
 
 const CERTIFICATE_FONT_PATHS = Object.freeze({
@@ -72,35 +74,58 @@ const quizProgressFor = (lessonState, quiz) => {
     return {
       quiz_id: String(quiz.id),
       watch_cycle: Number(lessonState?.watch_cycle) || 0,
-      attempts_used: 0,
+      failed_attempts: 0,
       passed: false,
     };
   }
-  return progress;
+
+  const legacyFailedAttempts = progress.passed ? 0 : Number(progress.attempts_used) || 0;
+  const failedAttempts = Math.max(0, Number(progress.failed_attempts ?? legacyFailedAttempts) || 0);
+  const bestScore = progress.best_score ?? progress.last_score ?? null;
+  const bestPercentage = progress.best_percentage ?? progress.last_percentage ?? null;
+  const { attempts_used: _legacyAttempts, ...currentProgress } = progress;
+
+  return {
+    ...currentProgress,
+    failed_attempts: failedAttempts,
+    passed: Boolean(progress.passed),
+    best_score: bestScore == null ? null : Number(bestScore),
+    best_percentage: bestPercentage == null ? null : Number(bestPercentage),
+  };
 };
 
 const getQuizState = ({ lessonState = {}, quiz }) => {
   const watchCycle = Number(lessonState.watch_cycle) || 0;
   const progress = quizProgressFor(lessonState, quiz);
-  const attemptsUsed = progress.watch_cycle === watchCycle ? Number(progress.attempts_used) || 0 : 0;
+  const failedAttempts = progress.watch_cycle === watchCycle ? Number(progress.failed_attempts) || 0 : 0;
   const maxAttempts = Math.max(1, Number(quiz.max_attempts) || 3);
   const passed = Boolean(progress.passed);
+  const bestScore = progress.best_score ?? null;
+  const bestPercentage = progress.best_percentage ?? null;
 
   if (watchCycle <= 0) {
-    return { watch_cycle: 0, attempts_used: 0, remaining_attempts: 0, passed: false, locked: true, lock_reason: 'WATCH_REQUIRED' };
-  }
-  if (passed) {
-    return { watch_cycle: watchCycle, attempts_used: attemptsUsed, remaining_attempts: 0, passed: true, locked: true, lock_reason: 'PASSED' };
+    return {
+      watch_cycle: 0,
+      failed_attempts: 0,
+      remaining_failed_attempts: 0,
+      passed,
+      best_score: bestScore,
+      best_percentage: bestPercentage,
+      locked: true,
+      lock_reason: 'WATCH_REQUIRED',
+    };
   }
 
-  const remainingAttempts = Math.max(0, maxAttempts - attemptsUsed);
+  const remainingFailedAttempts = Math.max(0, maxAttempts - failedAttempts);
   return {
     watch_cycle: watchCycle,
-    attempts_used: attemptsUsed,
-    remaining_attempts: remainingAttempts,
-    passed: false,
-    locked: remainingAttempts === 0,
-    lock_reason: remainingAttempts === 0 ? 'REWATCH_REQUIRED' : null,
+    failed_attempts: failedAttempts,
+    remaining_failed_attempts: remainingFailedAttempts,
+    passed,
+    best_score: bestScore,
+    best_percentage: bestPercentage,
+    locked: remainingFailedAttempts === 0,
+    lock_reason: remainingFailedAttempts === 0 ? 'REWATCH_REQUIRED' : null,
   };
 };
 
@@ -109,18 +134,22 @@ const recordLessonWatched = (lessonState = {}, quiz, watchedAt = new Date().toIS
   const quizState = quiz ? getQuizState({ lessonState: state, quiz }) : null;
   const shouldStartNextCycle = !state.watch_cycle || quizState?.lock_reason === 'REWATCH_REQUIRED';
   const watchCycle = shouldStartNextCycle ? (Number(state.watch_cycle) || 0) + 1 : Number(state.watch_cycle);
+  const quizProgress = quiz ? quizProgressFor(state, quiz) : null;
 
   return {
     ...state,
+    resume_position_seconds: 0,
+    furthest_watched_seconds: 0,
     completed_at: state.completed_at || watchedAt,
     last_watched_at: watchedAt,
     watch_cycle: watchCycle,
     ...(quiz && shouldStartNextCycle ? {
       quiz: {
+        ...quizProgress,
         quiz_id: String(quiz.id),
         watch_cycle: watchCycle,
-        attempts_used: 0,
-        passed: false,
+        failed_attempts: 0,
+        passed: Boolean(quizProgress.passed),
       },
     } : {}),
   };
@@ -128,19 +157,52 @@ const recordLessonWatched = (lessonState = {}, quiz, watchedAt = new Date().toIS
 
 const recordQuizAttempt = (lessonState = {}, quiz, grade, attemptedAt = new Date().toISOString()) => {
   const state = getQuizState({ lessonState, quiz });
+  const progress = quizProgressFor(lessonState, quiz);
+  const failedAttempts = state.failed_attempts + (grade.passed ? 0 : 1);
+  const previousBestPercentage = Number(progress.best_percentage);
+  const hasPreviousBest = progress.best_percentage != null && Number.isFinite(previousBestPercentage);
+  const isNewBest = !hasPreviousBest || Number(grade.percentage) > previousBestPercentage;
+  const rewatchRequired = !grade.passed && failedAttempts >= Math.max(1, Number(quiz.max_attempts) || 3);
   return {
     ...lessonState,
+    ...(rewatchRequired ? {
+      resume_position_seconds: 0,
+      furthest_watched_seconds: 0,
+      rewatch_started_at: attemptedAt,
+      playback_saved_at: attemptedAt,
+    } : {}),
     quiz: {
       quiz_id: String(quiz.id),
       watch_cycle: state.watch_cycle,
-      attempts_used: state.attempts_used + 1,
-      passed: Boolean(grade.passed),
+      failed_attempts: failedAttempts,
+      passed: Boolean(state.passed || grade.passed),
+      best_score: isNewBest ? grade.score : progress.best_score,
+      best_percentage: isNewBest ? grade.percentage : progress.best_percentage,
       last_score: grade.score,
       last_percentage: grade.percentage,
       last_attempt_at: attemptedAt,
     },
   };
 };
+
+const validateLessonCompletion = ({ lessonState = {}, quiz, trustedDurationSeconds, canSkip = false }) => {
+  if (canSkip || !quiz || getQuizState({ lessonState, quiz }).lock_reason !== 'REWATCH_REQUIRED') return;
+
+  const duration = Number(trustedDurationSeconds);
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error('A server-verified video duration is required to complete the rewatch.');
+  }
+
+  const furthestWatched = Math.max(0, Number(lessonState.furthest_watched_seconds) || 0);
+  const tolerance = Math.min(4, Math.max(0.5, duration * 0.05));
+  if (furthestWatched < duration - tolerance) {
+    throw new Error('Finish rewatching the video before unlocking the quiz.');
+  }
+};
+
+const needsTrustedDurationVerification = ({ lessonState = {}, quiz, canSkip = false }) => Boolean(
+  !canSkip && quiz && getQuizState({ lessonState, quiz }).lock_reason === 'REWATCH_REQUIRED'
+);
 
 const isCourseComplete = (lessons, quizzes, learningState = {}) => (
   isLearningComplete(lessons, quizzes, learningState)
@@ -235,6 +297,8 @@ const lessonStates = async (enrollment, lessons, providedQuizzes) => {
       ...lesson.toJSON(),
       access_locked: access.locked,
       access_lock_reason: access.lock_reason,
+      resume_position_seconds: Number(progress.resume_position_seconds) || 0,
+      furthest_watched_seconds: Number(progress.furthest_watched_seconds) || 0,
       progress_percent: lessonIsComplete(lesson, quiz, learningState) ? 100 : 0,
       completed_at: progress.completed_at || null,
       quiz: quiz ? {
@@ -326,6 +390,26 @@ exports.lessonDetail = asyncHandler(async (req, res) => {
 
 exports.completeLesson = asyncHandler(async (req, res) => {
   requireUuid(req.params.lessonId, 'Lesson ID');
+  const lessonMetadata = await Lesson.findByPk(req.params.lessonId);
+  if (!lessonMetadata) throw new AppError(404, 'Lesson not found.');
+  const { enrollment: previewEnrollment } = await loadEnrollment(req.user.id, lessonMetadata.course_id);
+  const previewLearningState = enrollmentState(previewEnrollment);
+  const previewQuiz = await Quiz.findOne({ where: { lesson_id: lessonMetadata.id } });
+  const shouldProbeDuration = needsTrustedDurationVerification({
+    lessonState: previewLearningState.lessons[String(lessonMetadata.id)] || {},
+    quiz: previewQuiz,
+    canSkip: lessonMetadata.can_skip,
+  });
+  let trustedDurationSeconds = null;
+  let durationVerificationError = null;
+  if (shouldProbeDuration) {
+    try {
+      trustedDurationSeconds = await getTrustedVideoDurationSeconds(lessonMetadata.video_url);
+    } catch (error) {
+      durationVerificationError = error;
+    }
+  }
+
   const result = await sequelize.transaction(async (transaction) => {
     const lesson = await Lesson.findByPk(req.params.lessonId, { transaction });
     if (!lesson) throw new AppError(404, 'Lesson not found.');
@@ -342,6 +426,20 @@ exports.completeLesson = asyncHandler(async (req, res) => {
     const quiz = quizzes.find((item) => String(item.lesson_id) === String(lesson.id));
     const now = new Date();
     const lessonKey = String(lesson.id);
+    try {
+      const quizState = quiz ? getQuizState({ lessonState: learningState.lessons[lessonKey] || {}, quiz }) : null;
+      if (!lesson.can_skip && quizState?.lock_reason === 'REWATCH_REQUIRED' && durationVerificationError) {
+        throw durationVerificationError;
+      }
+      validateLessonCompletion({
+        lessonState: learningState.lessons[lessonKey] || {},
+        quiz,
+        trustedDurationSeconds,
+        canSkip: lesson.can_skip,
+      });
+    } catch (error) {
+      throw new AppError(409, error.message);
+    }
     learningState.lessons[lessonKey] = recordLessonWatched(
       learningState.lessons[lessonKey] || {},
       quiz,
@@ -374,6 +472,74 @@ exports.completeLesson = asyncHandler(async (req, res) => {
   });
 });
 
+exports.saveLessonSession = asyncHandler(async (req, res) => {
+  requireUuid(req.params.lessonId, 'Lesson ID');
+  const payload = req.body || {};
+  const hasVideoPosition = Object.prototype.hasOwnProperty.call(payload, 'video_position_seconds')
+    || Object.prototype.hasOwnProperty.call(payload, 'furthest_watched_seconds');
+  const hasQuizAnswers = Object.prototype.hasOwnProperty.call(payload, 'quiz_answers');
+  if (!hasVideoPosition && !hasQuizAnswers) {
+    throw new AppError(400, 'Provide a video position or quiz answers to save.');
+  }
+
+  const session = await sequelize.transaction(async (transaction) => {
+    const lesson = await Lesson.findByPk(req.params.lessonId, { transaction });
+    if (!lesson) throw new AppError(404, 'Lesson not found.');
+    const { enrollment } = await loadEnrollment(req.user.id, lesson.course_id, transaction);
+    const learningState = enrollmentState(enrollment);
+    const lessons = await Lesson.findAll({
+      where: { course_id: lesson.course_id },
+      order: [['order_index', 'ASC'], ['created_at', 'ASC']],
+      transaction,
+    });
+    const lessonIds = lessons.map((item) => item.id);
+    const quizzes = lessonIds.length ? await Quiz.findAll({ where: { lesson_id: lessonIds }, transaction }) : [];
+    requireLessonAccessible({ lessonId: lesson.id, lessons, quizzes, learningState });
+
+    const quiz = quizzes.find((item) => String(item.lesson_id) === String(lesson.id));
+    let questionIds = [];
+    const lessonKey = String(lesson.id);
+    const lessonState = learningState.lessons[lessonKey] || {};
+    const quizState = quiz ? getQuizState({ lessonState, quiz }) : null;
+    if (hasQuizAnswers) {
+      if (!quiz) throw new AppError(404, 'This lesson does not have a quiz.');
+      if (quizState.locked) throw new AppError(409, 'This quiz is currently locked.');
+      const questions = await Question.findAll({
+        where: { quiz_id: quiz.id },
+        attributes: ['id'],
+        transaction,
+      });
+      questionIds = questions.map((question) => String(question.id));
+    }
+
+    let updatedLessonState;
+    try {
+      updatedLessonState = mergeLessonSession(
+        lessonState,
+        payload,
+        {
+          quizId: quiz?.id,
+          questionIds,
+          rewatchRequired: quizState?.lock_reason === 'REWATCH_REQUIRED',
+          allowSkipping: lesson.can_skip,
+          savedAt: new Date().toISOString(),
+        },
+      );
+    } catch (error) {
+      throw new AppError(400, error.message);
+    }
+    learningState.lessons[lessonKey] = updatedLessonState;
+    await enrollment.update({ learning_state: learningState, updated_at: new Date() }, { transaction });
+    return {
+      resume_position_seconds: Number(updatedLessonState.resume_position_seconds) || 0,
+      furthest_watched_seconds: Number(updatedLessonState.furthest_watched_seconds) || 0,
+      draft_answers: updatedLessonState.quiz?.draft_answers || {},
+    };
+  });
+
+  res.json({ message: 'Learning session saved.', session });
+});
+
 exports.getQuiz = asyncHandler(async (req, res) => {
   requireUuid(req.params.lessonId, 'Lesson ID');
   const lesson = await Lesson.findByPk(req.params.lessonId);
@@ -395,11 +561,13 @@ exports.getQuiz = asyncHandler(async (req, res) => {
     order: [['created_at', 'ASC']],
   });
   const lessonState = learningState.lessons[String(lesson.id)] || {};
+  const quizProgress = quizProgressFor(lessonState, quiz);
   res.json({
     quiz: {
       ...quiz.toJSON(),
       questions,
       ...getQuizState({ lessonState, quiz }),
+      draft_answers: quizProgress.draft_answers || {},
     },
   });
 });
@@ -425,8 +593,7 @@ exports.submitQuiz = asyncHandler(async (req, res) => {
     if (state.locked) {
       const messages = {
         WATCH_REQUIRED: 'Watch this lesson to the end before taking its quiz.',
-        REWATCH_REQUIRED: `You used all ${quiz.max_attempts} attempts. Rewatch the lesson to unlock more attempts.`,
-        PASSED: 'You already passed this quiz.',
+        REWATCH_REQUIRED: `You failed ${quiz.max_attempts} times. Rewatch the lesson to unlock the quiz.`,
       };
       throw new AppError(409, messages[state.lock_reason]);
     }
@@ -449,7 +616,8 @@ exports.submitQuiz = asyncHandler(async (req, res) => {
     return {
       attempt: {
         watch_cycle: updatedState.watch_cycle,
-        attempt_number: updatedState.attempts_used,
+        failed_attempts: updatedState.failed_attempts,
+        remaining_failed_attempts: updatedState.remaining_failed_attempts,
         correct_count: grade.correctCount,
         question_count: grade.questionCount,
         score: grade.score,
@@ -515,7 +683,9 @@ exports.__test = {
   certificateFontPaths: CERTIFICATE_FONT_PATHS,
   getQuizState,
   isCourseComplete,
+  needsTrustedDurationVerification,
   recordQuizAttempt,
   recordLessonWatched,
+  validateLessonCompletion,
   validateReviewInput,
 };

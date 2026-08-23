@@ -264,7 +264,7 @@ export default function QuizManagementPage() {
           </label>
 
           <label className="block text-sm font-semibold text-slate-700">
-            Max attempts <span className="text-error">*</span>
+            Max failed attempts <span className="text-error">*</span>
             <input
               type="number"
               min={1}

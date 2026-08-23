@@ -9,8 +9,10 @@ const {
   certificateFontPaths,
   getQuizState,
   isCourseComplete,
+  needsTrustedDurationVerification,
   recordQuizAttempt,
   recordLessonWatched,
+  validateLessonCompletion,
   validateReviewInput,
 } = require('../src/controllers/learningController').__test;
 
@@ -102,53 +104,221 @@ test('calculateQuizResult rejects incomplete and unknown answers', () => {
   );
 });
 
-test('getQuizState honors each quiz max_attempts value', () => {
+test('getQuizState treats max_attempts as the maximum failed attempts per watch', () => {
   const quiz = { id: 'quiz-1', max_attempts: 2 };
   const lessonState = {
     watch_cycle: 1,
-    quiz: { quiz_id: 'quiz-1', watch_cycle: 1, attempts_used: 2, passed: false },
+    quiz: { quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 2, passed: false },
   };
 
   assert.deepEqual(getQuizState({ lessonState, quiz }), {
     watch_cycle: 1,
-    attempts_used: 2,
-    remaining_attempts: 0,
+    failed_attempts: 2,
+    remaining_failed_attempts: 0,
     passed: false,
+    best_score: null,
+    best_percentage: null,
     locked: true,
     lock_reason: 'REWATCH_REQUIRED',
   });
 });
 
-test('recordLessonWatched starts learning once and resets attempts only after the limit', () => {
+test('a passed quiz stays open while failed attempts remain', () => {
   const quiz = { id: 'quiz-1', max_attempts: 3 };
-  const firstWatch = recordLessonWatched({}, quiz, '2026-08-20T08:00:00.000Z');
+  const lessonState = {
+    watch_cycle: 1,
+    quiz: {
+      quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 1, passed: true, best_score: 8, best_percentage: 80,
+    },
+  };
+
+  assert.deepEqual(getQuizState({ lessonState, quiz }), {
+    watch_cycle: 1,
+    failed_attempts: 1,
+    remaining_failed_attempts: 2,
+    passed: true,
+    best_score: 8,
+    best_percentage: 80,
+    locked: false,
+    lock_reason: null,
+  });
+});
+
+test('recordLessonWatched starts learning once and resets failed attempts only after the limit', () => {
+  const quiz = { id: 'quiz-1', max_attempts: 3 };
+  const firstWatch = recordLessonWatched({
+    resume_position_seconds: 120,
+    furthest_watched_seconds: 120,
+  }, quiz, '2026-08-20T08:00:00.000Z');
   const repeatWatch = recordLessonWatched({
     ...firstWatch,
-    quiz: { quiz_id: 'quiz-1', watch_cycle: 1, attempts_used: 2, passed: false },
+    quiz: { quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 2, passed: false },
   }, quiz, '2026-08-20T09:00:00.000Z');
   const rewatchAfterLimit = recordLessonWatched({
     ...firstWatch,
-    quiz: { quiz_id: 'quiz-1', watch_cycle: 1, attempts_used: 3, passed: false },
+    quiz: { quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 3, passed: false },
   }, quiz, '2026-08-20T10:00:00.000Z');
 
   assert.equal(firstWatch.watch_cycle, 1);
+  assert.equal(firstWatch.resume_position_seconds, 0);
+  assert.equal(firstWatch.furthest_watched_seconds, 0);
   assert.equal(repeatWatch.watch_cycle, 1);
-  assert.equal(repeatWatch.quiz.attempts_used, 2);
+  assert.equal(repeatWatch.quiz.failed_attempts, 2);
   assert.equal(rewatchAfterLimit.watch_cycle, 2);
-  assert.equal(rewatchAfterLimit.quiz.attempts_used, 0);
+  assert.equal(rewatchAfterLimit.quiz.failed_attempts, 0);
 });
 
-test('recordQuizAttempt increments the current cycle and preserves a passing result', () => {
+test('rewatching after the failed-attempt limit preserves pass status and best score', () => {
+  const quiz = { id: 'quiz-1', max_attempts: 3 };
+  const result = recordLessonWatched({
+    completed_at: '2026-08-20T08:00:00.000Z',
+    watch_cycle: 1,
+    quiz: {
+      quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 3, passed: true, best_score: 9, best_percentage: 90,
+    },
+  }, quiz, '2026-08-20T10:00:00.000Z');
+
+  assert.equal(result.watch_cycle, 2);
+  assert.equal(result.quiz.failed_attempts, 0);
+  assert.equal(result.quiz.passed, true);
+  assert.equal(result.quiz.best_score, 9);
+  assert.equal(result.quiz.best_percentage, 90);
+});
+
+test('the final failed quiz attempt resets video resume for the required rewatch', () => {
+  const quiz = { id: 'quiz-1', max_attempts: 3 };
+  const lessonState = {
+    completed_at: '2026-08-20T08:00:00.000Z',
+    resume_position_seconds: 45,
+    furthest_watched_seconds: 120,
+    watch_cycle: 1,
+    quiz: { quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 2, passed: false },
+  };
+
+  const result = recordQuizAttempt(
+    lessonState,
+    quiz,
+    { score: 3, percentage: 30, passed: false },
+    '2026-08-20T12:00:00.000Z',
+  );
+
+  assert.equal(result.resume_position_seconds, 0);
+  assert.equal(result.furthest_watched_seconds, 0);
+  assert.equal(result.quiz.failed_attempts, 3);
+});
+
+test('required rewatch cannot be completed before saved playback reaches the video end', () => {
+  const quiz = { id: 'quiz-1', max_attempts: 3 };
+  const lessonState = {
+    completed_at: '2026-08-20T08:00:00.000Z',
+    resume_position_seconds: 0,
+    furthest_watched_seconds: 0,
+    watch_cycle: 1,
+    quiz: { quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 3, passed: true },
+  };
+
+  assert.throws(
+    () => validateLessonCompletion({ lessonState, quiz, trustedDurationSeconds: 120 }),
+    /finish rewatching/i,
+  );
+  assert.throws(
+    () => validateLessonCompletion({ lessonState, quiz }),
+    /verified video duration/i,
+  );
+  assert.doesNotThrow(() => validateLessonCompletion({
+    lessonState: { ...lessonState, furthest_watched_seconds: 116 },
+    quiz,
+    trustedDurationSeconds: 120,
+  }));
+  assert.doesNotThrow(() => validateLessonCompletion({
+    lessonState,
+    quiz,
+    canSkip: true,
+  }));
+});
+
+test('trusted duration probing is needed only while a rewatch is required', () => {
+  const quiz = { id: 'quiz-1', max_attempts: 3 };
+  assert.equal(needsTrustedDurationVerification({ lessonState: {}, quiz }), false);
+  assert.equal(needsTrustedDurationVerification({
+    lessonState: {
+      watch_cycle: 1,
+      quiz: { quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 2, passed: false },
+    },
+    quiz,
+  }), false);
+  assert.equal(needsTrustedDurationVerification({
+    lessonState: {
+      watch_cycle: 1,
+      quiz: { quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 3, passed: true },
+    },
+    quiz,
+  }), true);
+  assert.equal(needsTrustedDurationVerification({
+    lessonState: {
+      watch_cycle: 1,
+      quiz: { quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 3, passed: true },
+    },
+    quiz,
+    canSkip: true,
+  }), false);
+});
+
+test('recordQuizAttempt increments failed_attempts only for a failed submission', () => {
   const quiz = { id: 'quiz-1', max_attempts: 3 };
   const lessonState = { watch_cycle: 2 };
 
   const failed = recordQuizAttempt(lessonState, quiz, { score: 3, percentage: 30, passed: false }, '2026-08-20T11:00:00.000Z');
   const passed = recordQuizAttempt(failed, quiz, { score: 6, percentage: 60, passed: true }, '2026-08-20T12:00:00.000Z');
 
-  assert.equal(failed.quiz.attempts_used, 1);
-  assert.equal(passed.quiz.attempts_used, 2);
+  assert.equal(failed.quiz.failed_attempts, 1);
+  assert.equal(passed.quiz.failed_attempts, 1);
   assert.equal(passed.quiz.passed, true);
   assert.equal(passed.quiz.last_score, 6);
+});
+
+test('recordQuizAttempt preserves a previous pass and best score after a lower retake', () => {
+  const quiz = { id: 'quiz-1', max_attempts: 3 };
+  const lessonState = {
+    watch_cycle: 1,
+    quiz: {
+      quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 0, passed: true, best_score: 8, best_percentage: 80,
+    },
+  };
+
+  const result = recordQuizAttempt(
+    lessonState,
+    quiz,
+    { score: 5, percentage: 50, passed: false },
+    '2026-08-20T12:00:00.000Z',
+  );
+
+  assert.equal(result.quiz.failed_attempts, 1);
+  assert.equal(result.quiz.passed, true);
+  assert.equal(result.quiz.best_score, 8);
+  assert.equal(result.quiz.best_percentage, 80);
+  assert.equal(result.quiz.last_score, 5);
+});
+
+test('recordQuizAttempt replaces the best score only when a retake is higher', () => {
+  const quiz = { id: 'quiz-1', max_attempts: 3 };
+  const lessonState = {
+    watch_cycle: 1,
+    quiz: {
+      quiz_id: 'quiz-1', watch_cycle: 1, failed_attempts: 1, passed: true, best_score: 8, best_percentage: 80,
+    },
+  };
+
+  const result = recordQuizAttempt(
+    lessonState,
+    quiz,
+    { score: 10, percentage: 100, passed: true },
+    '2026-08-20T12:00:00.000Z',
+  );
+
+  assert.equal(result.quiz.failed_attempts, 1);
+  assert.equal(result.quiz.best_score, 10);
+  assert.equal(result.quiz.best_percentage, 100);
 });
 
 test('isCourseComplete requires every lesson watched and its quiz passed', () => {
