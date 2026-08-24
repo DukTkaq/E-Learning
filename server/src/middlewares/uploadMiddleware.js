@@ -65,4 +65,26 @@ const videoUpload = multer({
   fileFilter: videoFileFilter
 });
 
-module.exports = { avatarUpload, videoUpload };
+const certUploadDir = path.join(__dirname, '../../public/uploads/certificates');
+if (!fs.existsSync(certUploadDir)) {
+  fs.mkdirSync(certUploadDir, { recursive: true });
+}
+
+const certStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, certUploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'cert-' + uniqueSuffix + ext);
+  }
+});
+
+const certificateUpload = multer({ 
+  storage: certStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: fileFilter
+});
+
+module.exports = { avatarUpload, videoUpload, certificateUpload };

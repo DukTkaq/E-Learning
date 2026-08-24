@@ -334,7 +334,13 @@ const resetPassword = async (req, res) => {
 const applyInstructor = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { expertise, bio, portfolio_url } = req.body;
+    const { expertise, bio } = req.body;
+    let portfolio_url = req.body.portfolio_url;
+    
+    // Check if a certificate image was uploaded
+    if (req.file) {
+      portfolio_url = `/uploads/certificates/${req.file.filename}`;
+    }
     
     const user = await User.findByPk(userId);
 
