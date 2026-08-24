@@ -8,6 +8,7 @@ import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import Pagination from '../../components/common/Pagination';
 import { approveInstructor, fetchInstructorRequests, rejectInstructor } from '../../features/admin/adminApi';
 import { clampPage } from '../../utils/pagination';
+import { resolveAssetUrl } from '../../utils/assets';
 
 const PAGE_LIMIT = 8;
 const EMPTY_PAGINATION = { page: 1, limit: PAGE_LIMIT, total_items: 0, total_pages: 0 };
@@ -191,8 +192,34 @@ export default function InstructorApprovalsPage() {
             <div className="space-y-5">
               <div><h4 className="text-lg font-bold text-slate-800">{selectedRequest.name}</h4><p className="text-sm text-gray-500">{selectedRequest.email}</p></div>
               <div><p className="text-xs font-bold uppercase text-gray-400">Expertise</p><p className="mt-1 rounded-xl border bg-gray-50 p-3">{selectedRequest.expertise || 'Not provided'}</p></div>
-              <div><p className="text-xs font-bold uppercase text-gray-400">Bio & Experience</p><div className="mt-1 min-h-24 whitespace-pre-wrap rounded-xl border bg-gray-50 p-3">{selectedRequest.bio || 'Not provided'}</div></div>
-              <div><p className="text-xs font-bold uppercase text-gray-400">Portfolio / CV</p>{selectedRequest.portfolio_url ? <a href={selectedRequest.portfolio_url} target="_blank" rel="noreferrer" className="mt-1 block truncate rounded-xl border border-primary/10 bg-primary/5 p-3 font-medium text-primary hover:underline">{selectedRequest.portfolio_url}</a> : <p className="mt-1 rounded-xl border bg-gray-50 p-3 text-gray-500">Not provided</p>}</div>
+              <div>
+                <p className="text-xs font-bold uppercase text-gray-400">Bio & Experience</p>
+                <div className="mt-1 min-h-24 whitespace-pre-wrap rounded-xl border bg-gray-50 p-3">
+                  {selectedRequest.bio ? (
+                    selectedRequest.bio.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                      part.match(/https?:\/\/[^\s]+/) ? (
+                        <a key={i} href={part} target="_blank" rel="noreferrer" className="text-primary hover:underline">{part}</a>
+                      ) : part
+                    )
+                  ) : 'Not provided'}
+                </div>
+              </div>
+                <div>
+                  <p className="text-xs font-bold uppercase text-gray-400">Certificate</p>
+                  {selectedRequest.portfolio_url ? (
+                    (selectedRequest.portfolio_url.match(/\.(jpeg|jpg|gif|png)$/i) || selectedRequest.portfolio_url.startsWith('/uploads/')) ? (
+                      <div className="mt-2 text-center bg-gray-50 rounded-xl border border-gray-200 p-2">
+                        <img src={resolveAssetUrl(selectedRequest.portfolio_url)} alt="Certificate" className="max-h-64 mx-auto rounded object-contain cursor-pointer hover:opacity-90" onClick={() => window.open(resolveAssetUrl(selectedRequest.portfolio_url), '_blank')} title="Click to enlarge" />
+                      </div>
+                    ) : (
+                      <a href={selectedRequest.portfolio_url} target="_blank" rel="noreferrer" className="mt-1 block truncate rounded-xl border border-primary/10 bg-primary/5 p-3 font-medium text-primary hover:underline">
+                        {selectedRequest.portfolio_url}
+                      </a>
+                    )
+                  ) : (
+                    <p className="mt-1 rounded-xl border bg-gray-50 p-3 text-gray-500">Not provided</p>
+                  )}
+                </div>
               <div className="flex justify-end gap-3 border-t pt-4">
                 <button type="button" onClick={() => handleReview(selectedRequest, 'reject')} disabled={reviewingId === selectedRequest.id} className="rounded-xl border border-red-200 px-5 py-2.5 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50">Reject Application</button>
                 <button type="button" onClick={() => handleReview(selectedRequest, 'approve')} disabled={reviewingId === selectedRequest.id} className="rounded-xl bg-green-500 px-5 py-2.5 font-semibold text-white hover:bg-green-600 disabled:opacity-50">{reviewingId === selectedRequest.id ? 'Processing...' : 'Approve Application'}</button>
