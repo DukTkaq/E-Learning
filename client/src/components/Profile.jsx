@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { User, Mail, Shield, Camera, Edit2, Save, X, Lock, Eye, EyeOff, Briefcase, Link as LinkIcon, AlignLeft, BookOpen, Award, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../utils/api'
+import { resolveAssetUrl } from '../utils/assets'
 
 export default function Profile() {
   const [user, setUser] = useState(null)
@@ -31,6 +32,7 @@ export default function Profile() {
   const [instructorForm, setInstructorForm] = useState({
     expertise: '',
     bio: '',
+    cv_link: '',
     portfolio_url: '',
     agreeTerms: false
   })
@@ -159,6 +161,10 @@ export default function Profile() {
       toast.error('Expertise and Bio are required.');
       return;
     }
+    if (!instructorForm.portfolio_url) {
+      toast.error('Certificate Image is required.');
+      return;
+    }
     if (!instructorForm.agreeTerms) {
       toast.error('You must agree to the terms to apply.');
       return;
@@ -166,10 +172,20 @@ export default function Profile() {
 
     setApplyLoading(true);
     try {
-      const res = await api.post('/auth/apply-instructor', {
-        expertise: instructorForm.expertise,
-        bio: instructorForm.bio,
-        portfolio_url: instructorForm.portfolio_url
+      const formData = new FormData();
+      formData.append('expertise', instructorForm.expertise);
+      
+      let finalBio = instructorForm.bio.trim();
+      if (instructorForm.cv_link && instructorForm.cv_link.trim()) {
+        finalBio += `\n\n--- CV / LinkedIn ---\n${instructorForm.cv_link.trim()}`;
+      }
+      formData.append('bio', finalBio);
+
+      if (instructorForm.portfolio_url) {
+        formData.append('certificate', instructorForm.portfolio_url);
+      }
+      const res = await api.post('/auth/apply-instructor', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       toast.success(res.data.message);
       const updatedUser = { ...user, status: 'Pending' };
@@ -347,11 +363,11 @@ export default function Profile() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
                     <LinkIcon className="w-4 h-4" />
-                    Portfolio URL
+                    Certificate
                   </label>
                   <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium truncate">
                     {user.portfolio_url ? (
-                      <a href={user.portfolio_url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{user.portfolio_url}</a>
+                      <a href={user.portfolio_url.startsWith('http') ? user.portfolio_url : resolveAssetUrl(user.portfolio_url)} target="_blank" rel="noreferrer" className="text-primary hover:underline">View Certificate</a>
                     ) : 'Not provided'}
                   </div>
                 </div>
@@ -526,15 +542,26 @@ export default function Profile() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-600">CV / LinkedIn URL</label>
+                  <label className="text-sm font-medium text-gray-600">CV / LinkedIn URL (Optional)</label>
                   <input
                     type="url"
                     placeholder="https://linkedin.com/in/yourprofile"
-                    value={instructorForm.portfolio_url}
-                    onChange={(e) => setInstructorForm({...instructorForm, portfolio_url: e.target.value})}
+                    value={instructorForm.cv_link}
+                    onChange={(e) => setInstructorForm({...instructorForm, cv_link: e.target.value})}
                     className="w-full px-4 py-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl outline-none transition-all"
                   />
                 </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">Certificate Image <span className="text-error">*</span></label>
+                    <input
+                      type="file"
+                      required
+                      accept="image/*"
+                      onChange={(e) => setInstructorForm({...instructorForm, portfolio_url: e.target.files[0]})}
+                      className="w-full px-4 py-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    />
+                  </div>
 
                 <div className="flex items-start gap-3 pt-2">
                   <input

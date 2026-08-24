@@ -3,7 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 
 const { verifyToken } = require('../middlewares/authMiddleware');
-const { avatarUpload } = require('../middlewares/uploadMiddleware');
+const { avatarUpload, certificateUpload } = require('../middlewares/uploadMiddleware');
 
 // Register API
 router.post('/register', authController.register);
@@ -30,6 +30,6 @@ router.post('/reset-password', authController.resetPassword);
 router.get('/profile/stats', verifyToken, authController.getProfileStats);
 
 // Apply to become an instructor API
-router.post('/apply-instructor', verifyToken, authController.applyInstructor);
+router.post('/apply-instructor', verifyToken, certificateUpload.single('certificate'), authController.applyInstructor);
 
 module.exports = router;
