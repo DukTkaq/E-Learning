@@ -246,7 +246,7 @@ export default function Profile() {
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden transition-all">
         {/* Cover Photo */}
         <div className="h-32 bg-gradient-to-r from-primary/80 to-secondary/80 w-full relative">
-          <div className="absolute -bottom-12 left-8 flex items-start space-x-4">
+          <div className="absolute top-20 left-8 flex items-start space-x-4">
             <div className="relative">
               <div className="w-24 h-24 rounded-full border-4 border-white bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-3xl text-white font-bold shadow-lg transition-all">
                 {getAvatarContent()}
@@ -305,6 +305,16 @@ export default function Profile() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Joined Date
+              </label>
+              <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium">
+                {stats?.created_at ? new Date(stats.created_at).toLocaleDateString('en-US') : 'Loading...'}
+              </div>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 Email Address
               </label>
@@ -312,16 +322,6 @@ export default function Profile() {
                 {user.email}
               </div>
               <p className="text-xs text-gray-400 mt-1">* Email address cannot be changed</p>
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium text-gray-500 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Joined Date
-              </label>
-              <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 font-medium">
-                {stats?.created_at ? new Date(stats.created_at).toLocaleDateString('en-US') : 'Loading...'}
-              </div>
             </div>
 
             {(!user.role || user.role === 'Student') && stats && (
