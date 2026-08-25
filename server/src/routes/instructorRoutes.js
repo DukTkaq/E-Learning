@@ -7,7 +7,7 @@ const router = express.Router();
 router.use(verifyToken, authorizeRoles('Instructor'));
 
 router.get('/revenue', controller.revenue);
-router.get('/reviews', controller.reviews);
+router.get('/courses/:courseId/reviews', controller.courseReviews);
 router.put('/reviews/:id/reply', controller.replyToReview);
 
 module.exports = router;

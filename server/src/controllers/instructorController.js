@@ -1,11 +1,13 @@
-const { QueryTypes } = require('sequelize');
+const { Op, QueryTypes } = require('sequelize');
 const { Review, Course, User, sequelize } = require('../models');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
+const { parseInstructorReviewFilters } = require('../rules/instructorReviewRules');
 
 const REVENUE_SORTS = new Set(['revenue_desc', 'sales_desc', 'title_asc']);
 const REVENUE_ACTIVITY = new Set(['all', 'sold', 'no_sales']);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const parseDateFilter = (value, fieldName, endOfDay = false) => {
   if (!value) return null;
@@ -107,18 +109,79 @@ const getRevenueData = async (instructorId, filters = {}) => {
   };
 };
 
-const listInstructorReviews = (instructorId) => Review.findAll({
-  include: [
-    {
-      model: Course,
-      where: { instructor_id: instructorId },
-      attributes: ['id', 'title'],
-      required: true,
+const REVIEW_SORT_ORDERS = {
+  newest: [['created_at', 'DESC'], ['id', 'DESC']],
+  oldest: [['created_at', 'ASC'], ['id', 'ASC']],
+  rating_desc: [['rating', 'DESC'], ['created_at', 'DESC']],
+  rating_asc: [['rating', 'ASC'], ['created_at', 'DESC']],
+};
+
+const getCourseReviews = async (courseId, instructorId, filters = {}) => {
+  if (!UUID.test(String(courseId))) {
+    throw new AppError(400, 'Course ID must be a valid UUID.');
+  }
+
+  const course = await Course.findOne({
+    where: { id: courseId, instructor_id: instructorId },
+    attributes: ['id', 'title', 'status'],
+  });
+  if (!course) throw new AppError(404, 'Course not found.');
+
+  let reviewFilters;
+  try {
+    reviewFilters = parseInstructorReviewFilters(filters);
+  } catch (error) {
+    throw new AppError(400, error.message);
+  }
+
+  const pagination = parsePagination(filters, { defaultLimit: 4, maxLimit: 20 });
+  const where = { course_id: courseId };
+  if (reviewFilters.replyStatus === 'awaiting') where.instructor_reply = null;
+  if (reviewFilters.replyStatus === 'replied') where.instructor_reply = { [Op.not]: null };
+  if (reviewFilters.rating) where.rating = reviewFilters.rating;
+  if (reviewFilters.search) {
+    where[Op.or] = [
+      { comment: { [Op.iLike]: `%${reviewFilters.search}%` } },
+      { '$User.name$': { [Op.iLike]: `%${reviewFilters.search}%` } },
+    ];
+  }
+
+  const [reviewPage, summaryRows] = await Promise.all([
+    Review.findAndCountAll({
+      where,
+      include: [{ model: User, attributes: ['id', 'name', 'avatar_url'], required: true }],
+      order: REVIEW_SORT_ORDERS[reviewFilters.sort],
+      limit: pagination.limit,
+      offset: pagination.offset,
+      distinct: true,
+      subQuery: false,
+    }),
+    Review.findAll({
+      where: { course_id: courseId },
+      attributes: ['rating', 'instructor_reply'],
+    }),
+  ]);
+
+  const awaitingReply = summaryRows.filter((review) => !review.instructor_reply).length;
+  const ratingTotal = summaryRows.reduce((sum, review) => sum + Number(review.rating), 0);
+  const totalReviews = summaryRows.length;
+
+  return {
+    course,
+    reviews: reviewPage.rows,
+    summary: {
+      total: totalReviews,
+      awaiting_reply: awaitingReply,
+      replied: totalReviews - awaitingReply,
+      average_rating: totalReviews ? Number((ratingTotal / totalReviews).toFixed(1)) : 0,
     },
-    { model: User, attributes: ['id', 'name', 'avatar_url'] },
-  ],
-  order: [['created_at', 'DESC']],
-});
+    pagination: buildPaginationMeta({
+      page: pagination.page,
+      limit: pagination.limit,
+      totalItems: reviewPage.count,
+    }),
+  };
+};
 
 const saveReviewReply = async (reviewId, instructorId, reply) => {
   const cleanReply = String(reply || '').trim();
@@ -149,8 +212,8 @@ exports.revenue = asyncHandler(async (req, res) => {
   res.json(await getRevenueData(req.user.id, req.query));
 });
 
-exports.reviews = asyncHandler(async (req, res) => {
-  res.json({ reviews: await listInstructorReviews(req.user.id) });
+exports.courseReviews = asyncHandler(async (req, res) => {
+  res.json(await getCourseReviews(req.params.courseId, req.user.id, req.query));
 });
 
 exports.replyToReview = asyncHandler(async (req, res) => {

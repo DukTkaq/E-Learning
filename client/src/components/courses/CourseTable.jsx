@@ -13,6 +13,7 @@ export default function CourseTable({
   emptyTitle = 'No courses yet',
   emptyDescription = 'Create your first course to start the approval process.',
   onView,
+  onViewReviews,
   onEdit,
   onHide,
   onViewLessons,
@@ -35,7 +36,7 @@ export default function CourseTable({
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left">
+        <table className="w-full min-w-[960px] text-left">
           <thead className="border-b border-gray-100 bg-slate-50 text-xs uppercase tracking-wide text-gray-500">
             <tr>
               <th className="px-6 py-4 font-semibold">Course</th>
@@ -72,6 +73,7 @@ export default function CourseTable({
                     course={course}
                     submitting={submittingCourseId === course.id}
                     onView={onView}
+                    onViewReviews={onViewReviews}
                     onEdit={onEdit}
                     onHide={onHide}
                     onViewLessons={onViewLessons}

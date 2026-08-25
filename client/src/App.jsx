@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Register from './components/Register'
 import Login from './components/Login'
@@ -17,7 +17,7 @@ import InstructorCourseDetailPage from './pages/instructor/CourseDetailPage'
 import LessonManagementPage from './pages/instructor/LessonManagementPage'
 import QuizManagementPage from './pages/instructor/QuizManagementPage'
 import RevenueDashboardPage from './pages/instructor/RevenueDashboardPage'
-import ReviewsPage from './pages/instructor/ReviewsPage'
+import CourseReviewsPage from './pages/instructor/CourseReviewsPage'
 import VoucherManagementPage from './pages/instructor/VoucherManagementPage'
 import CartPage from './pages/student/CartPage'
 import CheckoutPage from './pages/student/CheckoutPage'
@@ -128,11 +128,12 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={[2]} />}>
           <Route path="/instructor/courses" element={<InstructorLayout><CourseManagementPage /></InstructorLayout>} />
           <Route path="/instructor/courses/:courseId" element={<InstructorLayout><InstructorCourseDetailPage /></InstructorLayout>} />
+          <Route path="/instructor/courses/:courseId/reviews" element={<InstructorLayout><CourseReviewsPage /></InstructorLayout>} />
           <Route path="/instructor/courses/:courseId/lessons" element={<InstructorLayout><LessonManagementPage /></InstructorLayout>} />
           <Route path="/instructor/courses/:courseId/lessons/:lessonId/quiz" element={<InstructorLayout><QuizManagementPage /></InstructorLayout>} />
           <Route path="/instructor/vouchers" element={<InstructorLayout><VoucherManagementPage /></InstructorLayout>} />
           <Route path="/instructor/revenue" element={<InstructorLayout><RevenueDashboardPage /></InstructorLayout>} />
-          <Route path="/instructor/reviews" element={<InstructorLayout><ReviewsPage /></InstructorLayout>} />
+          <Route path="/instructor/reviews" element={<Navigate to="/instructor/courses" replace />} />
           <Route path="/instructor/profile" element={<InstructorLayout><Profile /></InstructorLayout>} />
         </Route>
 
