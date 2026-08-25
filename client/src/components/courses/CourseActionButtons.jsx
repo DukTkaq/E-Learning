@@ -1,10 +1,11 @@
-import { Edit3, Eye, EyeOff, List, LoaderCircle, Send } from 'lucide-react';
+import { Edit3, Eye, EyeOff, List, LoaderCircle, MessageSquare, Send } from 'lucide-react';
 import { canEditCourse, getCourseReadOnlyNotice } from '../../features/courses/courseStatus';
 
 export default function CourseActionButtons({
   course,
   submitting,
   onView,
+  onViewReviews,
   onEdit,
   onHide,
   onViewLessons,
@@ -20,6 +21,9 @@ export default function CourseActionButtons({
     <div className="flex justify-end gap-2">
       <button type="button" onClick={() => onView(course)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900">
         <Eye size={16} /> View
+      </button>
+      <button type="button" onClick={() => onViewReviews(course)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+        <MessageSquare size={16} /> Reviews
       </button>
       {onViewLessons && (
         <button type="button" onClick={() => onViewLessons(course)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-secondary hover:bg-secondary/10">

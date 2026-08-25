@@ -261,6 +261,7 @@ export default function CourseManagementPage() {
               : 'Create your first course to start the approval process.'
           }
           onView={(course) => navigate(`/instructor/courses/${course.id}`)}
+          onViewReviews={(course) => navigate(`/instructor/courses/${course.id}/reviews`)}
           onEdit={openEdit}
           onHide={hide}
           onViewLessons={(course) => navigate(`/instructor/courses/${course.id}/lessons`)}

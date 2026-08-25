@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BarChart3, BookOpen, LogOut, Menu, MessageSquare, X, Ticket, User } from 'lucide-react';
+import { BarChart3, BookOpen, LogOut, Menu, X, Ticket, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const NAV_ITEMS = [
   { label: 'Course Management', path: '/instructor/courses', icon: BookOpen },
   { label: 'Vouchers', path: '/instructor/vouchers', icon: Ticket },
   { label: 'Revenue', path: '/instructor/revenue', icon: BarChart3 },
-  { label: 'Reviews', path: '/instructor/reviews', icon: MessageSquare },
   { label: 'My Profile', path: '/instructor/profile', icon: User },
 ];
 
