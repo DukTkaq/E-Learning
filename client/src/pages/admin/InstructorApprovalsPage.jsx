@@ -31,6 +31,7 @@ export default function InstructorApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [reviewingId, setReviewingId] = useState(null);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const loadRequests = useCallback(async () => {
     setLoading(true);
@@ -183,13 +184,13 @@ export default function InstructorApprovalsPage() {
       </div>
 
       {selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
-          <div className="relative my-8 w-full max-w-2xl rounded-2xl border border-gray-200 bg-white p-7 shadow-2xl">
-            <div className="mb-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h3 className="flex items-center gap-2 text-xl font-bold text-gray-800"><UserCheck className="text-primary" size={24} /> Application Details</h3>
               <button type="button" onClick={() => setSelectedRequest(null)} className="rounded-lg p-1 text-gray-500 hover:bg-gray-200"><X size={20} /></button>
             </div>
-            <div className="space-y-5">
+            <div className="p-6 overflow-y-auto space-y-5">
               <div><h4 className="text-lg font-bold text-slate-800">{selectedRequest.name}</h4><p className="text-sm text-gray-500">{selectedRequest.email}</p></div>
               <div><p className="text-xs font-bold uppercase text-gray-400">Expertise</p><p className="mt-1 rounded-xl border bg-gray-50 p-3">{selectedRequest.expertise || 'Not provided'}</p></div>
               <div>
@@ -204,27 +205,56 @@ export default function InstructorApprovalsPage() {
                   ) : 'Not provided'}
                 </div>
               </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-gray-400">Certificate</p>
-                  {selectedRequest.portfolio_url ? (
-                    (selectedRequest.portfolio_url.match(/\.(jpeg|jpg|gif|png)$/i) || selectedRequest.portfolio_url.startsWith('/uploads/')) ? (
-                      <div className="mt-2 text-center bg-gray-50 rounded-xl border border-gray-200 p-2">
-                        <img src={resolveAssetUrl(selectedRequest.portfolio_url)} alt="Certificate" className="max-h-64 mx-auto rounded object-contain cursor-pointer hover:opacity-90" onClick={() => window.open(resolveAssetUrl(selectedRequest.portfolio_url), '_blank')} title="Click to enlarge" />
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-400">Certificates</p>
+                    {selectedRequest.InstructorCertificates && selectedRequest.InstructorCertificates.length > 0 ? (
+                      <div className="mt-2 grid grid-cols-2 gap-3">
+                        {selectedRequest.InstructorCertificates.map((cert, idx) => (
+                          <div key={idx} className="bg-gray-50 rounded-xl border border-gray-200 p-2 text-center">
+                            <img src={resolveAssetUrl(cert.url)} alt="Certificate" className="h-40 mx-auto rounded object-cover cursor-pointer hover:opacity-90 w-full" onClick={() => setPreviewImage(resolveAssetUrl(cert.url))} title="Click to enlarge" />
+                          </div>
+                        ))}
                       </div>
+                    ) : selectedRequest.portfolio_url ? (
+                      (selectedRequest.portfolio_url.match(/\.(jpeg|jpg|gif|png)$/i) || selectedRequest.portfolio_url.startsWith('/uploads/')) ? (
+                        <div className="mt-2 text-center bg-gray-50 rounded-xl border border-gray-200 p-2">
+                          <img src={resolveAssetUrl(selectedRequest.portfolio_url)} alt="Certificate" className="max-h-64 mx-auto rounded object-contain cursor-pointer hover:opacity-90" onClick={() => setPreviewImage(resolveAssetUrl(selectedRequest.portfolio_url))} title="Click to enlarge" />
+                        </div>
+                      ) : (
+                        <a href={selectedRequest.portfolio_url} target="_blank" rel="noreferrer" className="mt-1 block truncate rounded-xl border border-primary/10 bg-primary/5 p-3 font-medium text-primary hover:underline">
+                          {selectedRequest.portfolio_url}
+                        </a>
+                      )
                     ) : (
-                      <a href={selectedRequest.portfolio_url} target="_blank" rel="noreferrer" className="mt-1 block truncate rounded-xl border border-primary/10 bg-primary/5 p-3 font-medium text-primary hover:underline">
-                        {selectedRequest.portfolio_url}
-                      </a>
-                    )
-                  ) : (
-                    <p className="mt-1 rounded-xl border bg-gray-50 p-3 text-gray-500">Not provided</p>
-                  )}
-                </div>
-              <div className="flex justify-end gap-3 border-t pt-4">
-                <button type="button" onClick={() => handleReview(selectedRequest, 'reject')} disabled={reviewingId === selectedRequest.id} className="rounded-xl border border-red-200 px-5 py-2.5 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50">Reject Application</button>
-                <button type="button" onClick={() => handleReview(selectedRequest, 'approve')} disabled={reviewingId === selectedRequest.id} className="rounded-xl bg-green-500 px-5 py-2.5 font-semibold text-white hover:bg-green-600 disabled:opacity-50">{reviewingId === selectedRequest.id ? 'Processing...' : 'Approve Application'}</button>
-              </div>
+                      <p className="mt-1 rounded-xl border bg-gray-50 p-3 text-gray-500">Not provided</p>
+                    )}
+                  </div>
             </div>
+            <div className="flex justify-end gap-3 border-t p-6 bg-gray-50 rounded-b-2xl">
+              <button type="button" onClick={() => setSelectedRequest(null)} className="rounded-xl border border-gray-200 px-5 py-2.5 font-semibold text-gray-600 hover:bg-gray-100">Close</button>
+              <button type="button" onClick={() => handleReview(selectedRequest, 'reject')} disabled={reviewingId === selectedRequest.id} className="rounded-xl border border-red-200 px-5 py-2.5 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50">Reject</button>
+              <button type="button" onClick={() => handleReview(selectedRequest, 'approve')} disabled={reviewingId === selectedRequest.id} className="rounded-xl bg-green-500 px-5 py-2.5 font-semibold text-white hover:bg-green-600 disabled:opacity-50">{reviewingId === selectedRequest.id ? 'Processing...' : 'Approve'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4" onClick={() => setPreviewImage(null)}>
+          <div className="relative max-w-5xl max-h-screen w-full flex items-center justify-center">
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/40 text-white rounded-full transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img 
+              src={previewImage} 
+              alt="Preview" 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-default" 
+              onClick={(e) => e.stopPropagation()} 
+            />
           </div>
         </div>
       )}

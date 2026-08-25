@@ -30,6 +30,6 @@ router.post('/reset-password', authController.resetPassword);
 router.get('/profile/stats', verifyToken, authController.getProfileStats);
 
 // Apply to become an instructor API
-router.post('/apply-instructor', verifyToken, certificateUpload.single('certificate'), authController.applyInstructor);
+router.post('/apply-instructor', verifyToken, certificateUpload.array('certificates', 5), authController.applyInstructor);
 
 module.exports = router;

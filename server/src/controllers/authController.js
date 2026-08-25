@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Role = require('../models/Role');
 const Enrollment = require('../models/Enrollment');
 const Certificate = require('../models/Certificate');
+const InstructorCertificate = require('../models/InstructorCertificate');
 const nodemailer = require('nodemailer');
 
 const register = async (req, res) => {
@@ -337,11 +338,6 @@ const applyInstructor = async (req, res) => {
     const { expertise, bio } = req.body;
     let portfolio_url = req.body.portfolio_url;
     
-    // Check if a certificate image was uploaded
-    if (req.file) {
-      portfolio_url = `/uploads/certificates/${req.file.filename}`;
-    }
-    
     const user = await User.findByPk(userId);
 
     if (!user) {
@@ -369,6 +365,15 @@ const applyInstructor = async (req, res) => {
     user.bio = bio;
     user.portfolio_url = portfolio_url || null;
     await user.save();
+
+    // Save multiple certificates to the new table
+    if (req.files && req.files.length > 0) {
+      const certData = req.files.map(file => ({
+        user_id: userId,
+        url: `/uploads/certificates/${file.filename}`
+      }));
+      await InstructorCertificate.bulkCreate(certData);
+    }
 
     res.json({
       message: 'Application submitted successfully! Please wait for Admin approval.',
