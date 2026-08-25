@@ -74,6 +74,7 @@ const quizProgressFor = (lessonState, quiz) => {
     return {
       quiz_id: String(quiz.id),
       watch_cycle: Number(lessonState?.watch_cycle) || 0,
+      total_attempts: 0,
       failed_attempts: 0,
       passed: false,
     };
@@ -81,12 +82,14 @@ const quizProgressFor = (lessonState, quiz) => {
 
   const legacyFailedAttempts = progress.passed ? 0 : Number(progress.attempts_used) || 0;
   const failedAttempts = Math.max(0, Number(progress.failed_attempts ?? legacyFailedAttempts) || 0);
+  const totalAttempts = Math.max(failedAttempts, Number(progress.total_attempts) || 0);
   const bestScore = progress.best_score ?? progress.last_score ?? null;
   const bestPercentage = progress.best_percentage ?? progress.last_percentage ?? null;
   const { attempts_used: _legacyAttempts, ...currentProgress } = progress;
 
   return {
     ...currentProgress,
+    total_attempts: totalAttempts,
     failed_attempts: failedAttempts,
     passed: Boolean(progress.passed),
     best_score: bestScore == null ? null : Number(bestScore),
@@ -106,6 +109,7 @@ const getQuizState = ({ lessonState = {}, quiz }) => {
   if (watchCycle <= 0) {
     return {
       watch_cycle: 0,
+      total_attempts: progress.total_attempts,
       failed_attempts: 0,
       remaining_failed_attempts: 0,
       passed,
@@ -119,6 +123,7 @@ const getQuizState = ({ lessonState = {}, quiz }) => {
   const remainingFailedAttempts = Math.max(0, maxAttempts - failedAttempts);
   return {
     watch_cycle: watchCycle,
+    total_attempts: progress.total_attempts,
     failed_attempts: failedAttempts,
     remaining_failed_attempts: remainingFailedAttempts,
     passed,
@@ -174,6 +179,7 @@ const recordQuizAttempt = (lessonState = {}, quiz, grade, attemptedAt = new Date
     quiz: {
       quiz_id: String(quiz.id),
       watch_cycle: state.watch_cycle,
+      total_attempts: state.total_attempts + 1,
       failed_attempts: failedAttempts,
       passed: Boolean(state.passed || grade.passed),
       best_score: isNewBest ? grade.score : progress.best_score,

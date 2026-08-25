@@ -113,6 +113,7 @@ test('getQuizState treats max_attempts as the maximum failed attempts per watch'
 
   assert.deepEqual(getQuizState({ lessonState, quiz }), {
     watch_cycle: 1,
+    total_attempts: 2,
     failed_attempts: 2,
     remaining_failed_attempts: 0,
     passed: false,
@@ -134,6 +135,7 @@ test('a passed quiz stays open while failed attempts remain', () => {
 
   assert.deepEqual(getQuizState({ lessonState, quiz }), {
     watch_cycle: 1,
+    total_attempts: 1,
     failed_attempts: 1,
     remaining_failed_attempts: 2,
     passed: true,
@@ -272,7 +274,9 @@ test('recordQuizAttempt increments failed_attempts only for a failed submission'
   const passed = recordQuizAttempt(failed, quiz, { score: 6, percentage: 60, passed: true }, '2026-08-20T12:00:00.000Z');
 
   assert.equal(failed.quiz.failed_attempts, 1);
+  assert.equal(failed.quiz.total_attempts, 1);
   assert.equal(passed.quiz.failed_attempts, 1);
+  assert.equal(passed.quiz.total_attempts, 2);
   assert.equal(passed.quiz.passed, true);
   assert.equal(passed.quiz.last_score, 6);
 });
