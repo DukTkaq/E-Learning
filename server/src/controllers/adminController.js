@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { User, Role } = require('../models');
+const { User, Role, InstructorCertificate } = require('../models');
 const AppError = require('../utils/AppError');
 const { buildPaginationMeta, parsePagination } = require('../utils/pagination');
 
@@ -231,6 +231,7 @@ exports.getInstructorRequests = async (req, res) => {
     const { count, rows: users } = await User.findAndCountAll({
       where,
       attributes: ['id', 'name', 'email', 'avatar_url', 'status', 'created_at', 'expertise', 'bio', 'portfolio_url'],
+      include: [{ model: InstructorCertificate }],
       order: [['created_at', 'ASC'], ['id', 'ASC']],
       limit: pagination.limit,
       offset: pagination.offset,

@@ -33,7 +33,7 @@ export default function Profile() {
     expertise: '',
     bio: '',
     cv_link: '',
-    portfolio_url: '',
+    certificates: [],
     agreeTerms: false
   })
   const [applyLoading, setApplyLoading] = useState(false)
@@ -161,8 +161,8 @@ export default function Profile() {
       toast.error('Expertise and Bio are required.');
       return;
     }
-    if (!instructorForm.portfolio_url) {
-      toast.error('Certificate Image is required.');
+    if (!instructorForm.certificates || instructorForm.certificates.length === 0) {
+      toast.error('At least one Certificate Image is required.');
       return;
     }
     if (!instructorForm.agreeTerms) {
@@ -181,8 +181,10 @@ export default function Profile() {
       }
       formData.append('bio', finalBio);
 
-      if (instructorForm.portfolio_url) {
-        formData.append('certificate', instructorForm.portfolio_url);
+      if (instructorForm.certificates && instructorForm.certificates.length > 0) {
+        instructorForm.certificates.forEach(file => {
+          formData.append('certificates', file);
+        });
       }
       const res = await api.post('/auth/apply-instructor', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -553,14 +555,43 @@ export default function Profile() {
                 </div>
 
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-600">Certificate Image <span className="text-error">*</span></label>
+                    <label className="text-sm font-medium text-gray-600">Certificate Images (Up to 5) <span className="text-error">*</span></label>
                     <input
                       type="file"
-                      required
+                      required={!instructorForm.certificates?.length}
+                      multiple
                       accept="image/*"
-                      onChange={(e) => setInstructorForm({...instructorForm, portfolio_url: e.target.files[0]})}
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files);
+                        if (files.length > 5) {
+                          toast.error('You can only upload up to 5 certificates.');
+                          e.target.value = null;
+                          return;
+                        }
+                        setInstructorForm({...instructorForm, certificates: files});
+                      }}
                       className="w-full px-4 py-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                     />
+                    {instructorForm.certificates && instructorForm.certificates.length > 0 && (
+                      <div className="flex gap-2 mt-3 flex-wrap">
+                        {instructorForm.certificates.map((file, idx) => (
+                          <div key={idx} className="relative group">
+                            <img src={URL.createObjectURL(file)} alt="preview" className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-sm" />
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const newCerts = [...instructorForm.certificates];
+                                newCerts.splice(idx, 1);
+                                setInstructorForm({...instructorForm, certificates: newCerts});
+                              }}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                 <div className="flex items-start gap-3 pt-2">

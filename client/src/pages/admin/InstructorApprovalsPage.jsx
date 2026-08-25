@@ -204,22 +204,30 @@ export default function InstructorApprovalsPage() {
                   ) : 'Not provided'}
                 </div>
               </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-gray-400">Certificate</p>
-                  {selectedRequest.portfolio_url ? (
-                    (selectedRequest.portfolio_url.match(/\.(jpeg|jpg|gif|png)$/i) || selectedRequest.portfolio_url.startsWith('/uploads/')) ? (
-                      <div className="mt-2 text-center bg-gray-50 rounded-xl border border-gray-200 p-2">
-                        <img src={resolveAssetUrl(selectedRequest.portfolio_url)} alt="Certificate" className="max-h-64 mx-auto rounded object-contain cursor-pointer hover:opacity-90" onClick={() => window.open(resolveAssetUrl(selectedRequest.portfolio_url), '_blank')} title="Click to enlarge" />
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-400">Certificates</p>
+                    {selectedRequest.InstructorCertificates && selectedRequest.InstructorCertificates.length > 0 ? (
+                      <div className="mt-2 grid grid-cols-2 gap-3">
+                        {selectedRequest.InstructorCertificates.map((cert, idx) => (
+                          <div key={idx} className="bg-gray-50 rounded-xl border border-gray-200 p-2 text-center">
+                            <img src={resolveAssetUrl(cert.url)} alt="Certificate" className="h-40 mx-auto rounded object-cover cursor-pointer hover:opacity-90 w-full" onClick={() => window.open(resolveAssetUrl(cert.url), '_blank')} title="Click to enlarge" />
+                          </div>
+                        ))}
                       </div>
+                    ) : selectedRequest.portfolio_url ? (
+                      (selectedRequest.portfolio_url.match(/\.(jpeg|jpg|gif|png)$/i) || selectedRequest.portfolio_url.startsWith('/uploads/')) ? (
+                        <div className="mt-2 text-center bg-gray-50 rounded-xl border border-gray-200 p-2">
+                          <img src={resolveAssetUrl(selectedRequest.portfolio_url)} alt="Certificate" className="max-h-64 mx-auto rounded object-contain cursor-pointer hover:opacity-90" onClick={() => window.open(resolveAssetUrl(selectedRequest.portfolio_url), '_blank')} title="Click to enlarge" />
+                        </div>
+                      ) : (
+                        <a href={selectedRequest.portfolio_url} target="_blank" rel="noreferrer" className="mt-1 block truncate rounded-xl border border-primary/10 bg-primary/5 p-3 font-medium text-primary hover:underline">
+                          {selectedRequest.portfolio_url}
+                        </a>
+                      )
                     ) : (
-                      <a href={selectedRequest.portfolio_url} target="_blank" rel="noreferrer" className="mt-1 block truncate rounded-xl border border-primary/10 bg-primary/5 p-3 font-medium text-primary hover:underline">
-                        {selectedRequest.portfolio_url}
-                      </a>
-                    )
-                  ) : (
-                    <p className="mt-1 rounded-xl border bg-gray-50 p-3 text-gray-500">Not provided</p>
-                  )}
-                </div>
+                      <p className="mt-1 rounded-xl border bg-gray-50 p-3 text-gray-500">Not provided</p>
+                    )}
+                  </div>
               <div className="flex justify-end gap-3 border-t pt-4">
                 <button type="button" onClick={() => handleReview(selectedRequest, 'reject')} disabled={reviewingId === selectedRequest.id} className="rounded-xl border border-red-200 px-5 py-2.5 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50">Reject Application</button>
                 <button type="button" onClick={() => handleReview(selectedRequest, 'approve')} disabled={reviewingId === selectedRequest.id} className="rounded-xl bg-green-500 px-5 py-2.5 font-semibold text-white hover:bg-green-600 disabled:opacity-50">{reviewingId === selectedRequest.id ? 'Processing...' : 'Approve Application'}</button>

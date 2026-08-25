@@ -14,6 +14,7 @@ const Payment = require('./Payment');
 const Enrollment = require('./Enrollment');
 const Certificate = require('./Certificate');
 const Review = require('./Review');
+const InstructorCertificate = require('./InstructorCertificate');
 
 // === DEFINE ASSOCIATIONS ===
 
@@ -97,6 +98,10 @@ Review.belongsTo(User, { foreignKey: 'user_id' });
 Course.hasMany(Review, { foreignKey: 'course_id' });
 Review.belongsTo(Course, { foreignKey: 'course_id' });
 
+// User & InstructorCertificate
+User.hasMany(InstructorCertificate, { foreignKey: 'user_id' });
+InstructorCertificate.belongsTo(User, { foreignKey: 'user_id' });
+
 module.exports = {
   sequelize,
   Role,
@@ -112,5 +117,6 @@ module.exports = {
   Payment,
   Enrollment,
   Certificate,
-  Review
+  Review,
+  InstructorCertificate
 };
