@@ -224,7 +224,7 @@ export default function Profile() {
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
+        <h2 className="text-3xl font-bold text-gray-900">
           My Profile
         </h2>
         {!isEditing ? (
