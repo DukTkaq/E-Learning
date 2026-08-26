@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Eye, RefreshCw, UserCheck, X } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import Swal from 'sweetalert2';
 import AdminFilterBar from '../../components/admin/AdminFilterBar';
 import AdminPageHeader from '../../components/admin/AdminPageHeader';
 import Pagination from '../../components/common/Pagination';
-import { approveInstructor, fetchInstructorRequests, rejectInstructor } from '../../features/admin/adminApi';
+import { fetchInstructorRequests } from '../../features/admin/adminApi';
 import { clampPage } from '../../utils/pagination';
 import { resolveAssetUrl } from '../../utils/assets';
 
@@ -20,6 +19,7 @@ function parsePage(value) {
 
 export default function InstructorApprovalsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const listRef = useRef(null);
   const searchFilter = searchParams.get('search') || '';
   const profileFilter = searchParams.get('profile') || '';
@@ -29,9 +29,6 @@ export default function InstructorApprovalsPage() {
   const [searchInput, setSearchInput] = useState(searchFilter);
   const [pagination, setPagination] = useState(EMPTY_PAGINATION);
   const [loading, setLoading] = useState(true);
-  const [reviewingId, setReviewingId] = useState(null);
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
 
   const loadRequests = useCallback(async () => {
     setLoading(true);
@@ -79,33 +76,6 @@ export default function InstructorApprovalsPage() {
     if (page === 1) next.delete('page'); else next.set('page', String(page));
     setSearchParams(next);
     listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const handleReview = async (user, action) => {
-    setSelectedRequest(null);
-    const isApprove = action === 'approve';
-    const result = await Swal.fire({
-      title: `${isApprove ? 'Approve' : 'Reject'} this request?`,
-      text: isApprove
-        ? `${user.name} will be granted Instructor privileges.`
-        : 'Their application will be denied and their role will remain Student.',
-      icon: isApprove ? 'question' : 'warning',
-      showCancelButton: true,
-      confirmButtonText: isApprove ? 'Yes, Approve' : 'Yes, Reject',
-      confirmButtonColor: isApprove ? '#22c55e' : '#ef4444',
-    });
-    if (!result.isConfirmed) return;
-
-    setReviewingId(user.id);
-    try {
-      if (isApprove) await approveInstructor(user.id); else await rejectInstructor(user.id);
-      toast.success(`Instructor request ${isApprove ? 'approved' : 'rejected'} for ${user.name}.`);
-      await loadRequests();
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Could not process the request.');
-    } finally {
-      setReviewingId(null);
-    }
   };
 
   const hasFilters = Boolean(searchFilter || profileFilter);
@@ -170,7 +140,7 @@ export default function InstructorApprovalsPage() {
                   <td className="px-6 py-4">{user.expertise || 'Not provided'}</td>
                   <td className="px-6 py-4">{user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : '—'}</td>
                   <td className="px-6 py-4 text-right">
-                    <button type="button" onClick={() => setSelectedRequest(user)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 font-semibold text-gray-600 hover:bg-gray-100"><Eye size={16} /> Details</button>
+                    <button type="button" onClick={() => navigate(`/admin/instructor-approvals/${user.id}`)} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 font-semibold text-gray-600 hover:bg-gray-100"><Eye size={16} /> Details</button>
                   </td>
                 </tr>
               )) : (
@@ -183,81 +153,6 @@ export default function InstructorApprovalsPage() {
         <div className="mt-6"><Pagination page={pagination.page} totalPages={pagination.total_pages} onPageChange={changePage} disabled={loading} ariaLabel="Instructor application pagination" /></div>
       </div>
 
-      {selectedRequest && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h3 className="flex items-center gap-2 text-xl font-bold text-gray-800"><UserCheck className="text-primary" size={24} /> Application Details</h3>
-              <button type="button" onClick={() => setSelectedRequest(null)} className="rounded-lg p-1 text-gray-500 hover:bg-gray-200"><X size={20} /></button>
-            </div>
-            <div className="p-6 overflow-y-auto space-y-5">
-              <div><h4 className="text-lg font-bold text-slate-800">{selectedRequest.name}</h4><p className="text-sm text-gray-500">{selectedRequest.email}</p></div>
-              <div><p className="text-xs font-bold uppercase text-gray-400">Expertise</p><p className="mt-1 rounded-xl border bg-gray-50 p-3">{selectedRequest.expertise || 'Not provided'}</p></div>
-              <div>
-                <p className="text-xs font-bold uppercase text-gray-400">Bio & Experience</p>
-                <div className="mt-1 min-h-24 whitespace-pre-wrap rounded-xl border bg-gray-50 p-3">
-                  {selectedRequest.bio ? (
-                    selectedRequest.bio.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
-                      part.match(/https?:\/\/[^\s]+/) ? (
-                        <a key={i} href={part} target="_blank" rel="noreferrer" className="text-primary hover:underline">{part}</a>
-                      ) : part
-                    )
-                  ) : 'Not provided'}
-                </div>
-              </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase text-gray-400">Certificates</p>
-                    {selectedRequest.InstructorCertificates && selectedRequest.InstructorCertificates.length > 0 ? (
-                      <div className="mt-2 grid grid-cols-2 gap-3">
-                        {selectedRequest.InstructorCertificates.map((cert, idx) => (
-                          <div key={idx} className="bg-gray-50 rounded-xl border border-gray-200 p-2 text-center">
-                            <img src={resolveAssetUrl(cert.url)} alt="Certificate" className="h-40 mx-auto rounded object-cover cursor-pointer hover:opacity-90 w-full" onClick={() => setPreviewImage(resolveAssetUrl(cert.url))} title="Click to enlarge" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : selectedRequest.portfolio_url ? (
-                      (selectedRequest.portfolio_url.match(/\.(jpeg|jpg|gif|png)$/i) || selectedRequest.portfolio_url.startsWith('/uploads/')) ? (
-                        <div className="mt-2 text-center bg-gray-50 rounded-xl border border-gray-200 p-2">
-                          <img src={resolveAssetUrl(selectedRequest.portfolio_url)} alt="Certificate" className="max-h-64 mx-auto rounded object-contain cursor-pointer hover:opacity-90" onClick={() => setPreviewImage(resolveAssetUrl(selectedRequest.portfolio_url))} title="Click to enlarge" />
-                        </div>
-                      ) : (
-                        <a href={selectedRequest.portfolio_url} target="_blank" rel="noreferrer" className="mt-1 block truncate rounded-xl border border-primary/10 bg-primary/5 p-3 font-medium text-primary hover:underline">
-                          {selectedRequest.portfolio_url}
-                        </a>
-                      )
-                    ) : (
-                      <p className="mt-1 rounded-xl border bg-gray-50 p-3 text-gray-500">Not provided</p>
-                    )}
-                  </div>
-            </div>
-            <div className="flex justify-end gap-3 border-t p-6 bg-gray-50 rounded-b-2xl">
-              <button type="button" onClick={() => setSelectedRequest(null)} className="rounded-xl border border-gray-200 px-5 py-2.5 font-semibold text-gray-600 hover:bg-gray-100">Close</button>
-              <button type="button" onClick={() => handleReview(selectedRequest, 'reject')} disabled={reviewingId === selectedRequest.id} className="rounded-xl border border-red-200 px-5 py-2.5 font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50">Reject</button>
-              <button type="button" onClick={() => handleReview(selectedRequest, 'approve')} disabled={reviewingId === selectedRequest.id} className="rounded-xl bg-green-500 px-5 py-2.5 font-semibold text-white hover:bg-green-600 disabled:opacity-50">{reviewingId === selectedRequest.id ? 'Processing...' : 'Approve'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Image Preview Modal */}
-      {previewImage && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4" onClick={() => setPreviewImage(null)}>
-          <div className="relative max-w-5xl max-h-screen w-full flex items-center justify-center">
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/40 text-white rounded-full transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <img 
-              src={previewImage} 
-              alt="Preview" 
-              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-default" 
-              onClick={(e) => e.stopPropagation()} 
-            />
-          </div>
-        </div>
-      )}
     </section>
   );
 }

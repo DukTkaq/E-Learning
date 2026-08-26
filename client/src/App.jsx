@@ -26,6 +26,7 @@ import CatalogPage from './pages/student/CatalogPage'
 import MyCoursesPage from './pages/student/MyCoursesPage'
 import CourseApprovalsPage from './pages/admin/CourseApprovalsPage'
 import InstructorApprovalsPage from './pages/admin/InstructorApprovalsPage'
+import InstructorApplicationDetailPage from './pages/admin/InstructorApplicationDetailPage'
 import AdminCoursePreviewPage from './pages/admin/AdminCoursePreviewPage'
 import RoleHomeRedirect from './components/routing/RoleHomeRedirect'
 import PendingCartIntent from './components/routing/PendingCartIntent'
@@ -121,6 +122,7 @@ function App() {
           <Route path="/admin/approvals" element={<AdminLayout><CourseApprovalsPage /></AdminLayout>} />
           <Route path="/admin/approvals/:courseId" element={<AdminLayout><AdminCoursePreviewPage /></AdminLayout>} />
           <Route path="/admin/instructor-approvals" element={<AdminLayout><InstructorApprovalsPage /></AdminLayout>} />
+          <Route path="/admin/instructor-approvals/:id" element={<AdminLayout><InstructorApplicationDetailPage /></AdminLayout>} />
           <Route path="/admin/profile" element={<AdminLayout><Profile /></AdminLayout>} />
         </Route>
 
