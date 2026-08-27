@@ -1,4 +1,12 @@
-export default function PaymentDetailsPanel({ form, onChange }) {
+import { CheckCircle2, LoaderCircle } from 'lucide-react';
+
+export default function PaymentDetailsPanel({
+  form,
+  appliedCouponCode,
+  applying,
+  onApply,
+  onChange,
+}) {
   const updateField = (event) => onChange(event.target.name, event.target.value);
 
   return (
@@ -10,10 +18,23 @@ export default function PaymentDetailsPanel({ form, onChange }) {
           <p className="mt-1 text-sm leading-6 text-gray-500">You will continue on VNPay to choose QR, domestic bank or international card.</p>
         </div>
 
-        <label className="block text-sm font-semibold text-slate-700">
-          Coupon code <span className="font-normal text-gray-400">(optional)</span>
-          <input name="coupon_code" value={form.coupon_code} onChange={updateField} maxLength={50} className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 uppercase outline-none focus:border-primary focus:ring-4 focus:ring-primary/10" placeholder="SAVE20" />
-        </label>
+        <div>
+          <label htmlFor="checkout-coupon" className="block text-sm font-semibold text-slate-700">
+            Coupon code <span className="font-normal text-gray-400">(optional)</span>
+          </label>
+          <div className="mt-2 flex gap-2">
+            <input id="checkout-coupon" name="coupon_code" value={form.coupon_code} onChange={updateField} maxLength={50} className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-3 uppercase outline-none focus:border-primary focus:ring-4 focus:ring-primary/10" placeholder="SAVE20" />
+            <button type="button" onClick={onApply} disabled={applying || !form.coupon_code.trim()} className="inline-flex min-w-24 items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
+              {applying && <LoaderCircle className="animate-spin" size={17} />}
+              Apply
+            </button>
+          </div>
+        </div>
+        {appliedCouponCode && (
+          <p className="flex items-center gap-2 text-sm font-semibold text-success">
+            <CheckCircle2 size={17} /> Voucher {appliedCouponCode} applied
+          </p>
+        )}
       </div>
     </article>
   );
