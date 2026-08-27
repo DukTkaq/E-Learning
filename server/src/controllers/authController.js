@@ -368,10 +368,29 @@ const applyInstructor = async (req, res) => {
 
     // Save multiple certificates to the new table
     if (req.files && req.files.length > 0) {
-      const certData = req.files.map(file => ({
-        user_id: userId,
-        url: `/uploads/certificates/${file.filename}`
-      }));
+      let certInfos = [];
+      try {
+        if (req.body.certificatesData) {
+          certInfos = JSON.parse(req.body.certificatesData);
+        }
+      } catch (e) {
+        console.error("Failed to parse certificatesData", e);
+      }
+
+      const certData = req.files.map((file, index) => {
+        const info = certInfos[index] || {};
+        return {
+          user_id: userId,
+          name: info.name || 'Untitled Certificate',
+          issuer: info.issuer || 'Unknown Issuer',
+          issued_date: info.issued_date || null,
+          url: `/uploads/certificates/${file.filename}`
+        };
+      });
+
+      // Xóa các chứng chỉ cũ (nếu có do test hoặc db manual change) để tránh rác dữ liệu
+      await InstructorCertificate.destroy({ where: { user_id: userId } });
+
       await InstructorCertificate.bulkCreate(certData);
     }
 

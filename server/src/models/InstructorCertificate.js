@@ -11,6 +11,18 @@ const InstructorCertificate = sequelize.define('InstructorCertificate', {
     type: DataTypes.UUID,
     allowNull: false
   },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  issuer: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  issued_date: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
   url: {
     type: DataTypes.TEXT,
     allowNull: false

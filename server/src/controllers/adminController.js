@@ -253,6 +253,25 @@ exports.getInstructorRequests = async (req, res) => {
   }
 };
 
+// [GET] /api/admin/instructor-requests/:id
+exports.getInstructorRequestById = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id, {
+      attributes: ['id', 'name', 'email', 'avatar_url', 'expertise', 'bio', 'portfolio_url', 'status', 'created_at'],
+      include: [{ model: InstructorCertificate }]
+    });
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.status(200).json(user);
+  } catch (error) {
+    console.error('Error fetching instructor request details:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+};
+
 // [PUT] /api/admin/instructor-requests/:id/approve
 exports.approveInstructor = async (req, res) => {
   try {

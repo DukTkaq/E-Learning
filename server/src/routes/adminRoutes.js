@@ -25,6 +25,7 @@ router.get('/dashboard', adminController.getDashboardMetrics);
 
 // Instructor approval workflow
 router.get('/instructor-requests', adminController.getInstructorRequests);
+router.get('/instructor-requests/:id', adminController.getInstructorRequestById);
 router.put('/instructor-requests/:id/approve', adminController.approveInstructor);
 router.put('/instructor-requests/:id/reject', adminController.rejectInstructor);
 

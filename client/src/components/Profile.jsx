@@ -182,8 +182,25 @@ export default function Profile() {
       formData.append('bio', finalBio);
 
       if (instructorForm.certificates && instructorForm.certificates.length > 0) {
-        instructorForm.certificates.forEach(file => {
-          formData.append('certificates', file);
+        // Validate each cert has name and issuer
+        for (let i = 0; i < instructorForm.certificates.length; i++) {
+          const cert = instructorForm.certificates[i];
+          if (!cert.name.trim() || !cert.issuer.trim() || !cert.file) {
+            toast.error(`Certificate #${i + 1} is missing Name, Issuer, or Image File.`);
+            setApplyLoading(false);
+            return;
+          }
+        }
+        
+        const certsData = instructorForm.certificates.map(c => ({
+          name: c.name,
+          issuer: c.issuer,
+          issued_date: c.issued_date || null
+        }));
+        formData.append('certificatesData', JSON.stringify(certsData));
+
+        instructorForm.certificates.forEach(c => {
+          formData.append('certificates', c.file);
         });
       }
       const res = await api.post('/auth/apply-instructor', formData, {
@@ -207,7 +224,7 @@ export default function Profile() {
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold bg-gradient-to-br from-primary to-secondary bg-clip-text text-transparent">
+        <h2 className="text-3xl font-bold text-gray-900">
           My Profile
         </h2>
         {!isEditing ? (
@@ -503,9 +520,9 @@ export default function Profile() {
         )}
 
         {isApplyingInstructor && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="w-full max-w-lg bg-white p-7 rounded-2xl border border-gray-200 shadow-2xl relative my-8">
-              <div className="flex justify-between items-center mb-6">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="w-full max-w-lg bg-white rounded-2xl border border-gray-200 shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="flex justify-between items-center p-6 border-b border-gray-100 shrink-0">
                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                   <Shield className="w-6 h-6 text-primary" />
                   Become an Instructor
@@ -518,7 +535,8 @@ export default function Profile() {
                 </button>
               </div>
 
-              <form onSubmit={handleApplyInstructor} className="space-y-5">
+              <div className="p-6 overflow-y-auto">
+                <form onSubmit={handleApplyInstructor} className="space-y-5">
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-600">Expertise Field <span className="text-error">*</span></label>
                   <input
@@ -554,42 +572,62 @@ export default function Profile() {
                   />
                 </div>
 
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-gray-600">Certificate Images (Up to 5) <span className="text-error">*</span></label>
-                    <input
-                      type="file"
-                      required={!instructorForm.certificates?.length}
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files);
-                        if (files.length > 5) {
-                          toast.error('You can only upload up to 5 certificates.');
-                          e.target.value = null;
-                          return;
-                        }
-                        setInstructorForm({...instructorForm, certificates: files});
-                      }}
-                      className="w-full px-4 py-2.5 bg-white border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                    />
-                    {instructorForm.certificates && instructorForm.certificates.length > 0 && (
-                      <div className="flex gap-2 mt-3 flex-wrap">
-                        {instructorForm.certificates.map((file, idx) => (
-                          <div key={idx} className="relative group">
-                            <img src={URL.createObjectURL(file)} alt="preview" className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-sm" />
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                const newCerts = [...instructorForm.certificates];
-                                newCerts.splice(idx, 1);
-                                setInstructorForm({...instructorForm, certificates: newCerts});
-                              }}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-600">Certificates (Up to 20) <span className="text-error">*</span></label>
+                      {instructorForm.certificates.length < 20 && (
+                        <button 
+                          type="button" 
+                          onClick={() => setInstructorForm({...instructorForm, certificates: [...instructorForm.certificates, { name: '', issuer: '', issued_date: '', file: null }]})}
+                          className="text-xs font-semibold text-primary hover:text-primary-hover bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          + Add Certificate
+                        </button>
+                      )}
+                    </div>
+                    {instructorForm.certificates.map((cert, idx) => (
+                      <div key={idx} className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3 relative">
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const newCerts = [...instructorForm.certificates];
+                            newCerts.splice(idx, 1);
+                            setInstructorForm({...instructorForm, certificates: newCerts});
+                          }}
+                          className="absolute top-3 right-3 text-red-500 hover:text-red-700 bg-red-50 p-1 rounded-md"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                        
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 mb-1 block">Certificate Name <span className="text-error">*</span></label>
+                          <input type="text" required value={cert.name} onChange={e => { const c = [...instructorForm.certificates]; c[idx].name = e.target.value; setInstructorForm({...instructorForm, certificates: c}); }} className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg outline-none text-sm" placeholder="e.g. AWS Certified Solutions Architect" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Issuer <span className="text-error">*</span></label>
+                            <input type="text" required value={cert.issuer} onChange={e => { const c = [...instructorForm.certificates]; c[idx].issuer = e.target.value; setInstructorForm({...instructorForm, certificates: c}); }} className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg outline-none text-sm" placeholder="e.g. Amazon Web Services" />
                           </div>
-                        ))}
+                          <div>
+                            <label className="text-xs font-semibold text-gray-500 mb-1 block">Issue Date (Optional)</label>
+                            <input type="date" value={cert.issued_date} onChange={e => { const c = [...instructorForm.certificates]; c[idx].issued_date = e.target.value; setInstructorForm({...instructorForm, certificates: c}); }} className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg outline-none text-sm" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 mb-1 block">Certificate Image <span className="text-error">*</span></label>
+                          <div className="flex items-center gap-3">
+                            <input type="file" required={!cert.file} accept="image/*" onChange={e => { const file = e.target.files[0]; if (file) { const c = [...instructorForm.certificates]; c[idx].file = file; setInstructorForm({...instructorForm, certificates: c}); } }} className="w-full px-3 py-1.5 bg-white border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 rounded-lg outline-none text-sm file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                            {cert.file && (
+                              <img src={URL.createObjectURL(cert.file)} alt="preview" className="w-10 h-10 object-cover rounded border border-gray-200" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {instructorForm.certificates.length === 0 && (
+                      <div className="text-center p-6 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
+                        <p className="text-sm text-gray-500 mb-3">No certificates added yet. You must add at least one.</p>
+                        <button type="button" onClick={() => setInstructorForm({...instructorForm, certificates: [{ name: '', issuer: '', issued_date: '', file: null }]})} className="text-sm font-semibold text-primary hover:text-primary-hover bg-primary/10 px-4 py-2 rounded-lg transition-colors">+ Add Certificate</button>
                       </div>
                     )}
                   </div>
@@ -607,14 +645,15 @@ export default function Profile() {
                   </label>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={applyLoading || !instructorForm.agreeTerms}
-                  className="w-full py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-colors disabled:opacity-50 mt-4"
-                >
-                  {applyLoading ? 'Submitting...' : 'Submit Application'}
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    disabled={applyLoading || !instructorForm.agreeTerms}
+                    className="w-full py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary-hover transition-colors disabled:opacity-50 mt-4"
+                  >
+                    {applyLoading ? 'Submitting...' : 'Submit Application'}
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         )}
