@@ -1,20 +1,33 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import Pagination from '../../components/common/Pagination';
-import CourseReviewFilters from '../../components/instructor/CourseReviewFilters';
-import CourseReviewSummary from '../../components/instructor/CourseReviewSummary';
-import ReviewCard from '../../components/instructor/ReviewCard';
-import { fetchCourseReviews, replyToReview } from '../../features/instructor/instructorApi';
-import { clampPage } from '../../utils/pagination';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
+import Pagination from "../../components/common/Pagination";
+import CourseReviewFilters from "../../components/instructor/CourseReviewFilters";
+import CourseReviewSummary from "../../components/instructor/CourseReviewSummary";
+import ReviewCard from "../../components/instructor/ReviewCard";
+import {
+  fetchCourseReviews,
+  replyToReview,
+} from "../../features/instructor/instructorApi";
+import { clampPage } from "../../utils/pagination";
 
 const PAGE_LIMIT = 4;
-const EMPTY_PAGINATION = { page: 1, limit: PAGE_LIMIT, total_items: 0, total_pages: 0 };
-const EMPTY_SUMMARY = { total: 0, awaiting_reply: 0, replied: 0, average_rating: 0 };
+const EMPTY_PAGINATION = {
+  page: 1,
+  limit: PAGE_LIMIT,
+  total_items: 0,
+  total_pages: 0,
+};
+const EMPTY_SUMMARY = {
+  total: 0,
+  awaiting_reply: 0,
+  replied: 0,
+  average_rating: 0,
+};
 
 function parsePage(value) {
-  const page = Number.parseInt(value || '1', 10);
+  const page = Number.parseInt(value || "1", 10);
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
@@ -24,11 +37,11 @@ export default function CourseReviewsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const listRef = useRef(null);
 
-  const searchFilter = searchParams.get('search') || '';
-  const replyFilter = searchParams.get('reply_status') || '';
-  const ratingFilter = searchParams.get('rating') || '';
-  const sortFilter = searchParams.get('sort') || 'newest';
-  const currentPage = parsePage(searchParams.get('page'));
+  const searchFilter = searchParams.get("search") || "";
+  const replyFilter = searchParams.get("reply_status") || "";
+  const ratingFilter = searchParams.get("rating") || "";
+  const sortFilter = searchParams.get("sort") || "newest";
+  const currentPage = parsePage(searchParams.get("page"));
 
   const [course, setCourse] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -38,30 +51,42 @@ export default function CourseReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
 
-  const loadReviews = useCallback(async ({ showLoading = true } = {}) => {
-    if (showLoading) setLoading(true);
-    try {
-      const response = await fetchCourseReviews(courseId, {
-        search: searchFilter || undefined,
-        reply_status: replyFilter || undefined,
-        rating: ratingFilter || undefined,
-        sort: sortFilter,
-        page: currentPage,
-        limit: PAGE_LIMIT,
-      });
-      setCourse(response.data.course || null);
-      setReviews(response.data.reviews || []);
-      setSummary(response.data.summary || EMPTY_SUMMARY);
-      setPagination(response.data.pagination || EMPTY_PAGINATION);
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Could not load course reviews.');
-      setReviews([]);
-      setSummary(EMPTY_SUMMARY);
-      setPagination(EMPTY_PAGINATION);
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  }, [courseId, currentPage, ratingFilter, replyFilter, searchFilter, sortFilter]);
+  const loadReviews = useCallback(
+    async ({ showLoading = true } = {}) => {
+      if (showLoading) setLoading(true);
+      try {
+        const response = await fetchCourseReviews(courseId, {
+          search: searchFilter || undefined,
+          reply_status: replyFilter || undefined,
+          rating: ratingFilter || undefined,
+          sort: sortFilter,
+          page: currentPage,
+          limit: PAGE_LIMIT,
+        });
+        setCourse(response.data.course || null);
+        setReviews(response.data.reviews || []);
+        setSummary(response.data.summary || EMPTY_SUMMARY);
+        setPagination(response.data.pagination || EMPTY_PAGINATION);
+      } catch (error) {
+        toast.error(
+          error.response?.data?.message || "Could not load course reviews.",
+        );
+        setReviews([]);
+        setSummary(EMPTY_SUMMARY);
+        setPagination(EMPTY_PAGINATION);
+      } finally {
+        if (showLoading) setLoading(false);
+      }
+    },
+    [
+      courseId,
+      currentPage,
+      ratingFilter,
+      replyFilter,
+      searchFilter,
+      sortFilter,
+    ],
+  );
 
   useEffect(() => {
     loadReviews();
@@ -78,64 +103,72 @@ export default function CourseReviewsPage() {
     if (!correctingOutOfRangePage) return;
 
     const nextParams = new URLSearchParams(searchParams);
-    if (validPage === 1) nextParams.delete('page');
-    else nextParams.set('page', String(validPage));
+    if (validPage === 1) nextParams.delete("page");
+    else nextParams.set("page", String(validPage));
     setSearchParams(nextParams, { replace: true });
   }, [correctingOutOfRangePage, searchParams, setSearchParams, validPage]);
 
   const updateFilter = (key, value) => {
     const nextParams = new URLSearchParams(searchParams);
-    if (value && !(key === 'sort' && value === 'newest')) nextParams.set(key, value);
+    if (value && !(key === "sort" && value === "newest"))
+      nextParams.set(key, value);
     else nextParams.delete(key);
-    nextParams.delete('page');
+    nextParams.delete("page");
     setSearchParams(nextParams);
   };
 
   const applySearch = (event) => {
     event.preventDefault();
-    updateFilter('search', searchInput.trim());
+    updateFilter("search", searchInput.trim());
   };
 
   const clearFilters = () => {
-    setSearchInput('');
+    setSearchInput("");
     setSearchParams({});
   };
 
   const changePage = (page) => {
-    if (page < 1 || page > pagination.total_pages || page === currentPage) return;
+    if (page < 1 || page > pagination.total_pages || page === currentPage)
+      return;
 
     const nextParams = new URLSearchParams(searchParams);
-    if (page === 1) nextParams.delete('page');
-    else nextParams.set('page', String(page));
+    if (page === 1) nextParams.delete("page");
+    else nextParams.set("page", String(page));
     setSearchParams(nextParams);
-    listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const saveReply = async (reviewId, reply) => {
     setSavingId(reviewId);
     try {
       const response = await replyToReview(reviewId, reply);
-      setReviews((currentReviews) => currentReviews.map((review) => (
-        review.id === reviewId ? { ...review, ...response.data.review } : review
-      )));
-      toast.success('Reply saved successfully.');
+      setReviews((currentReviews) =>
+        currentReviews.map((review) =>
+          review.id === reviewId
+            ? { ...review, ...response.data.review }
+            : review,
+        ),
+      );
+      toast.success("Reply saved successfully.");
       await loadReviews({ showLoading: false });
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Could not save reply.');
+      toast.error(error.response?.data?.message || "Could not save reply.");
       return false;
     } finally {
       setSavingId(null);
     }
   };
 
-  const hasAppliedFilters = Boolean(searchFilter || replyFilter || ratingFilter || sortFilter !== 'newest');
+  const hasAppliedFilters = Boolean(
+    searchFilter || replyFilter || ratingFilter || sortFilter !== "newest",
+  );
 
   return (
     <section>
       <button
         type="button"
-        onClick={() => navigate('/instructor/courses')}
+        onClick={() => navigate("/instructor/courses")}
         className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-primary"
       >
         <ArrowLeft size={17} /> Back to courses
@@ -145,7 +178,9 @@ export default function CourseReviewsPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Course reviews</h1>
           <p className="mt-2 text-gray-500">
-            {course ? `Student feedback for ${course.title}.` : 'View student feedback and reply to it.'}
+            {course
+              ? `Student feedback for ${course.title}.`
+              : "View student feedback and reply to it."}
           </p>
         </div>
         <button
@@ -154,7 +189,8 @@ export default function CourseReviewsPage() {
           disabled={loading}
           className="inline-flex items-center gap-2 self-start rounded-xl border border-gray-200 bg-white px-4 py-2.5 font-semibold text-gray-600 shadow-sm hover:border-primary/30 hover:text-primary disabled:opacity-60"
         >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} /> Refresh
+          <RefreshCw size={18} className={loading ? "animate-spin" : ""} />{" "}
+          Refresh
         </button>
       </div>
 
@@ -169,21 +205,25 @@ export default function CourseReviewsPage() {
           disabled={loading}
           onSearchChange={setSearchInput}
           onSearch={applySearch}
-          onReplyStatusChange={(value) => updateFilter('reply_status', value)}
-          onRatingChange={(value) => updateFilter('rating', value)}
-          onSortChange={(value) => updateFilter('sort', value)}
+          onReplyStatusChange={(value) => updateFilter("reply_status", value)}
+          onRatingChange={(value) => updateFilter("rating", value)}
+          onSortChange={(value) => updateFilter("sort", value)}
           onClear={clearFilters}
         />
 
         <div className="mb-4 flex items-center justify-between gap-3 text-sm text-slate-500">
           <p>
-            {loading ? 'Loading reviews...' : `${pagination.total_items} review${pagination.total_items === 1 ? '' : 's'} found`}
+            {loading
+              ? "Loading reviews..."
+              : `${pagination.total_items} review${pagination.total_items === 1 ? "" : "s"} found`}
           </p>
           {hasAppliedFilters && !loading && <p>Filters are applied</p>}
         </div>
 
         {loading || correctingOutOfRangePage ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-gray-500 shadow-sm">Loading reviews...</div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-gray-500 shadow-sm">
+            Loading reviews...
+          </div>
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {reviews.map((review) => (
@@ -197,7 +237,9 @@ export default function CourseReviewsPage() {
             ))}
             {!reviews.length && (
               <div className="col-span-full rounded-2xl border border-dashed border-primary/25 bg-white p-12 text-center text-gray-500">
-                {hasAppliedFilters ? 'No reviews match the current filters.' : 'This course has no student reviews yet.'}
+                {hasAppliedFilters
+                  ? "No reviews match the current filters."
+                  : "This course has no student reviews yet."}
               </div>
             )}
           </div>

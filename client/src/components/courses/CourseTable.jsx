@@ -1,17 +1,20 @@
-import { Image } from 'lucide-react';
-import CourseStatusBadge from './CourseStatusBadge';
-import CourseRejectionReasonButton from './CourseRejectionReasonButton';
-import CourseActionButtons from './CourseActionButtons';
-import { resolveAssetUrl } from '../../utils/assets';
+import { Image } from "lucide-react";
+import CourseStatusBadge from "./CourseStatusBadge";
+import CourseRejectionReasonButton from "./CourseRejectionReasonButton";
+import CourseActionButtons from "./CourseActionButtons";
+import { resolveAssetUrl } from "../../utils/assets";
 
-const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+const currency = new Intl.NumberFormat("vi-VN", {
+  style: "currency",
+  currency: "VND",
+});
 
 export default function CourseTable({
   courses,
   loading,
   submittingCourseId,
-  emptyTitle = 'No courses yet',
-  emptyDescription = 'Create your first course to start the approval process.',
+  emptyTitle = "No courses yet",
+  emptyDescription = "Create your first course to start the approval process.",
   onView,
   onViewReviews,
   onEdit,
@@ -20,13 +23,19 @@ export default function CourseTable({
   onSubmitForApproval,
 }) {
   if (loading) {
-    return <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center text-gray-500 shadow-sm">Loading courses...</div>;
+    return (
+      <div className="rounded-2xl border border-gray-100 bg-white p-12 text-center text-gray-500 shadow-sm">
+        Loading courses...
+      </div>
+    );
   }
 
   if (!courses.length) {
     return (
       <div className="rounded-2xl border border-dashed border-primary/25 bg-white p-12 text-center shadow-sm">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Image size={26} /></div>
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Image size={26} />
+        </div>
         <h3 className="font-bold text-slate-800">{emptyTitle}</h3>
         <p className="mt-1 text-sm text-gray-500">{emptyDescription}</p>
       </div>
@@ -48,24 +57,52 @@ export default function CourseTable({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {courses.map((course) => (
-              <tr key={course.id} className="transition-colors hover:bg-slate-50/70">
+              <tr
+                key={course.id}
+                className="transition-colors hover:bg-slate-50/70"
+              >
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     <div className="h-12 w-16 overflow-hidden rounded-lg bg-gradient-to-br from-primary/15 to-secondary/15">
-                      {course.thumbnail ? <img src={resolveAssetUrl(course.thumbnail)} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-primary"><Image size={20} /></div>}
+                      {course.thumbnail ? (
+                        <img
+                          src={resolveAssetUrl(course.thumbnail)}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-primary">
+                          <Image size={20} />
+                        </div>
+                      )}
                     </div>
                     <div className="max-w-xs">
-                      <p className="truncate font-semibold text-slate-800">{course.title}</p>
-                      <p className="mt-0.5 truncate text-xs text-gray-500">Updated {new Date(course.updated_at || course.created_at).toLocaleDateString('vi-VN')}</p>
+                      <p className="truncate font-semibold text-slate-800">
+                        {course.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-gray-500">
+                        Updated{" "}
+                        {new Date(
+                          course.updated_at || course.created_at,
+                        ).toLocaleDateString("vi-VN")}
+                      </p>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{course.Category?.name || '—'}</td>
-                <td className="px-6 py-4 text-sm font-semibold text-slate-700">{currency.format(Number(course.price))}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  {course.Category?.name || "—"}
+                </td>
+                <td className="px-6 py-4 text-sm font-semibold text-slate-700">
+                  {currency.format(Number(course.price))}
+                </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <CourseStatusBadge status={course.status} />
-                    {course.status === 'Rejected' && <CourseRejectionReasonButton reason={course.rejection_reason} />}
+                    {course.status === "Rejected" && (
+                      <CourseRejectionReasonButton
+                        reason={course.rejection_reason}
+                      />
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4">

@@ -234,4 +234,132 @@ begin
   end loop;
 end $$;
 
+-- Compact approved courses for quick lesson and quiz demonstrations.
+-- Each course has 10 lessons, one quiz per lesson and five A-answer questions.
+do $$
+declare
+  instructor_id_value uuid;
+  course_id_value uuid;
+  lesson_id_value uuid;
+  quiz_id_value uuid;
+  category_ids integer[];
+  course_index integer;
+  lesson_index integer;
+  question_index integer;
+  course_titles text[] := array[
+    'Git and GitHub Essentials',
+    'REST API Fundamentals',
+    'SQL Query Practice',
+    'Responsive Web Design',
+    'Product Discovery Basics'
+  ];
+  course_descriptions text[] := array[
+    'Practice commits, branches, pull requests and collaboration through a focused Git workflow.',
+    'Understand REST conventions and build clear API endpoints with validation and error handling.',
+    'Write practical SQL queries for filtering, joining, grouping and updating relational data.',
+    'Create accessible responsive layouts with semantic HTML, modern CSS and reusable patterns.',
+    'Turn user problems into validated product ideas through research, prioritization and prototyping.'
+  ];
+  thumbnails text[] := array[
+    'https://oypswqnajpvggtmzxuzr.supabase.co/storage/v1/object/public/course-thumbnails/seed/git-collaboration.jpg',
+    'https://oypswqnajpvggtmzxuzr.supabase.co/storage/v1/object/public/course-thumbnails/seed/node-backend.jpg',
+    'https://oypswqnajpvggtmzxuzr.supabase.co/storage/v1/object/public/course-thumbnails/seed/sql-database.jpg',
+    'https://oypswqnajpvggtmzxuzr.supabase.co/storage/v1/object/public/course-thumbnails/seed/react-frontend.jpg',
+    'https://oypswqnajpvggtmzxuzr.supabase.co/storage/v1/object/public/course-thumbnails/seed/ui-ux-design.jpg'
+  ];
+  uploaded_videos text[] := array[
+    'https://oypswqnajpvggtmzxuzr.supabase.co/storage/v1/object/public/course-videos/seed/local-lesson-01.mp4',
+    'https://oypswqnajpvggtmzxuzr.supabase.co/storage/v1/object/public/course-videos/seed/local-lesson-02.mp4',
+    'https://oypswqnajpvggtmzxuzr.supabase.co/storage/v1/object/public/course-videos/seed/local-lesson-03.mp4',
+    'https://oypswqnajpvggtmzxuzr.supabase.co/storage/v1/object/public/course-videos/seed/local-lesson-04.mp4'
+  ];
+begin
+  select id into instructor_id_value
+  from public.users
+  where email = 'teacher@fpt.edu.vn'
+  limit 1;
+
+  select array_agg(id order by id) into category_ids
+  from public.categories
+  where lower(name) in ('csi106', 'mae');
+
+  if instructor_id_value is null then
+    raise exception 'Compact course seed requires teacher@fpt.edu.vn.';
+  end if;
+
+  if coalesce(array_length(category_ids, 1), 0) = 0 then
+    raise exception 'Compact course seed requires at least one category.';
+  end if;
+
+  for course_index in 1..array_length(course_titles, 1) loop
+    course_id_value := gen_random_uuid();
+
+    insert into public.courses (
+      id, title, description, thumbnail, price, status, rejection_reason,
+      instructor_id, category_id, created_at, updated_at
+    ) values (
+      course_id_value,
+      course_titles[course_index],
+      course_descriptions[course_index],
+      thumbnails[course_index],
+      (249000 + course_index * 30000)::numeric(10, 2),
+      'Approved',
+      null,
+      instructor_id_value,
+      category_ids[1 + ((course_index - 1) % array_length(category_ids, 1))],
+      now() - ((6 - course_index) * interval '30 minutes'),
+      now()
+    );
+
+    for lesson_index in 1..10 loop
+      lesson_id_value := gen_random_uuid();
+
+      insert into public.lessons (
+        id, title, video_url, course_id, order_index, is_final, created_at, updated_at
+      ) values (
+        lesson_id_value,
+        'Lesson ' || lpad(lesson_index::text, 2, '0') || ': Guided Practice',
+        uploaded_videos[1 + ((lesson_index - 1) % array_length(uploaded_videos, 1))],
+        course_id_value,
+        lesson_index - 1,
+        lesson_index = 10,
+        now() + (lesson_index * interval '1 second'),
+        now()
+      );
+
+      quiz_id_value := gen_random_uuid();
+
+      insert into public.quizzes (
+        id, title, passing_score, max_attempts, lesson_id, created_at, updated_at
+      ) values (
+        quiz_id_value,
+        'Lesson ' || lpad(lesson_index::text, 2, '0') || ' Quick Check',
+        70,
+        3,
+        lesson_id_value,
+        now(),
+        now()
+      );
+
+      for question_index in 1..5 loop
+        insert into public.questions (
+          id, content, option_a, option_b, option_c, option_d,
+          correct_answer, quiz_id, created_at, updated_at
+        ) values (
+          gen_random_uuid(),
+          'Question ' || question_index || ': What is the best next step for this lesson scenario?',
+          'Apply the lesson concept and verify the result',
+          'Skip the requirement and guess the result',
+          'Ignore feedback from the exercise',
+          'Leave the activity incomplete',
+          'A',
+          quiz_id_value,
+          now() + (question_index * interval '1 second'),
+          now()
+        );
+      end loop;
+    end loop;
+  end loop;
+end $$;
+
 commit;

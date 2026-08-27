@@ -1,16 +1,17 @@
-import { CircleHelp } from 'lucide-react';
-import Swal from 'sweetalert2';
+import { CircleHelp } from "lucide-react";
+import Swal from "sweetalert2";
 
 export default function CourseRejectionReasonButton({ reason }) {
   if (!reason) return null;
 
-  const showReason = () => Swal.fire({
-    title: 'Why this course was rejected',
-    text: reason,
-    icon: 'info',
-    confirmButtonText: 'Got it',
-    confirmButtonColor: '#4f46e5',
-  });
+  const showReason = () =>
+    Swal.fire({
+      title: "Why this course was rejected",
+      text: reason,
+      icon: "info",
+      confirmButtonText: "Got it",
+      confirmButtonColor: "#4f46e5",
+    });
 
   return (
     <button
