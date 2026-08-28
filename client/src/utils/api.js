@@ -32,11 +32,11 @@ api.interceptors.response.use(
       
       // Check if the error is a Ban message
       if (msg.toLowerCase().includes('banned') || msg.toLowerCase().includes('ban')) {
-        // 1. Clear authentication data
+        // 1. Clear authentication data immediately so React hides protected UI
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         
-        // 2. Show SweetAlert2 Popup
+        // 2. Show SweetAlert2 Popup (Ensure it halts everything)
         Swal.fire({
           icon: 'error',
           title: 'Account Banned!',
@@ -44,11 +44,19 @@ api.interceptors.response.use(
           confirmButtonText: 'Understood',
           confirmButtonColor: '#ef4444', // Tailwind error color
           allowOutsideClick: false, // Force user to click OK
+          allowEscapeKey: false,
           backdrop: `rgba(0,0,0,0.8)` // Dark overlay
         }).then(() => {
-          // 3. Redirect to login page
+          // 3. Redirect to login page ONLY AFTER they click Understood
+          window.location.href = '/login';
+        }).catch(() => {
+          // Fallback if Swal fails
+          alert(msg);
           window.location.href = '/login';
         });
+        
+        // Return a never-resolving promise so the calling component doesn't continue its logic
+        return new Promise(() => {});
       }
     }
     return Promise.reject(error);

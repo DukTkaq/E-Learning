@@ -90,7 +90,12 @@ export default function Navbar() {
             {isLoggedIn ? (
               <div className="relative">
                 <button 
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  onClick={async () => {
+                    if (!isDropdownOpen && user?.role_id === 3) {
+                      try { await fetchCart(); } catch (error) {}
+                    }
+                    setIsDropdownOpen(!isDropdownOpen);
+                  }}
                   className="flex items-center gap-2 p-1 pl-3 pr-1 rounded-full border border-gray-200 hover:border-primary/30 hover:bg-gray-50 transition-all focus:outline-none"
                 >
                   <span className="text-sm font-medium text-gray-700 hidden sm:block">{user?.name || 'Unknown User'}</span>
